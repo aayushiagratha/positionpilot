@@ -62,4 +62,4 @@ Average output rating: 9/10
 
 ## Built by
 
-Aayushi Agratha — [LinkedIn] - https://www.linkedin.com/in/aayushiagratha/
+Aayushi Agratha — https://www.linkedin.com/in/aayushiagratha/
