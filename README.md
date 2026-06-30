@@ -42,10 +42,17 @@ Two-stage pipeline with human-in-the-loop approval gate:
 1. Install Docker and n8n
 2. Create PostgreSQL database
 3. Import workflow JSON files into n8n
-4. Add credentials: OpenRouter API key (Header Auth) + PostgreSQL connection
-5. Activate all 3 workflows
+4. Add credentials:
+   - **PostgreSQL** connection
+   - **OpenRouter Auth** (Header Auth, header name `Authorization`, value `Bearer <your-openrouter-key>`)
+   - **x-api-key** (Header Auth, header name `x-api-key`, value `<your-generated-secret>`) — required for all three webhooks (Stage 1, Stage 2, Approve Run)
+5. On each Webhook trigger node (Stage 1, Stage 2, Approve Run), set **Authentication** to **Header Auth** and select the `x-api-key` credential
+6. Activate all 3 workflows
+7. Any client calling these webhooks must send the `x-api-key` header on every request, or the call will be rejected with 403
 
 ## Environment Variables
+
+```
 N8N_SECURE_COOKIE=false
 DB_TYPE=postgresdb
 DB_POSTGRESDB_HOST=your-postgres-host
@@ -54,6 +61,11 @@ DB_POSTGRESDB_DATABASE=postgres
 DB_POSTGRESDB_USER=your-user
 DB_POSTGRESDB_PASSWORD=your-password
 WEBHOOK_URL=your-n8n-url
+```
+
+## Security
+
+All three public webhooks (Stage 1, Stage 2, Approve Run) require a valid `x-api-key` header. Unauthenticated requests are rejected with a 403 before any workflow logic executes. See `AGENTS.md` for the full security implementation notes, including a documented credential-leak incident and fix from the development process.
 
 ## Output Quality
 
