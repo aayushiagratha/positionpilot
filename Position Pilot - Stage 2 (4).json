@@ -1,0 +1,743 @@
+{
+  "name": "Position Pilot - Stage 2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "positionpilot-stage2",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        112,
+        16
+      ],
+      "id": "a0d771fd-5802-400d-b7f0-41ebb21f3e0b",
+      "name": "Webhook",
+      "webhookId": "0f9f5f89-6bec-426b-a30a-c35d7ac10167",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MJXIEO6iR9LFLGZM",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT agent, output, marketing_stage FROM strategy_runs WHERE generation_run_id = $1 AND status = 'approved' ORDER BY agent;",
+        "options": {
+          "queryReplacement": "=={{ $('Webhook').first().json.body.generation_run_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        320,
+        16
+      ],
+      "id": "5838e80e-e914-4b14-a426-3aff81fc3564",
+      "name": " Read Approved Foundation.",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.gtm_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1488,
+        176
+      ],
+      "id": "4876a458-f132-4ed5-b9c2-cb9f9a25db43",
+      "name": " OpenRouter - GTM Agent",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "dIblh9Gy9dz11R6X",
+          "name": "OpenRouter Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.seo_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1488,
+        -160
+      ],
+      "id": "3c045d8e-1f30-44cb-a9b7-087aa8965d7d",
+      "name": " OpenRouter - SEO Agent",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "dIblh9Gy9dz11R6X",
+          "name": "OpenRouter Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  return [{ json: { _valid: false, _raw: cleaned, _error: err.message } }];\n}\nreturn [{ json: { _valid: true, generation_run_id: $('Reshape Data').first().json.generation_run_id, agent: 'messaging', messaging_output: parsed } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        0
+      ],
+      "id": "f2178c28-4147-462c-99f6-f4d10e016958",
+      "name": " Messaging JSON Gate",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  return [{ json: { _valid: false, _raw: cleaned, _error: err.message } }];\n}\nreturn [{ json: { _valid: true, generation_run_id: $('Reshape Data').first().json.generation_run_id, agent: 'gtm', gtm_output: parsed } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        176
+      ],
+      "id": "d7527f37-a725-44d0-b853-3711dbc3606f",
+      "name": "GTM JSON Gate",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  return [{ json: { _valid: false, _raw: cleaned, _error: err.message } }];\n}\nreturn [{ json: { _valid: true, generation_run_id: $('Reshape Data').first().json.generation_run_id, agent: 'seo', seo_output: parsed } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        -160
+      ],
+      "id": "ca497eb4-ea7a-45d1-a1fe-13053f29fdda",
+      "name": " SEO JSON Gate ",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 3,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1984,
+        -32
+      ],
+      "id": "79687861-1063-410d-ad64-49776fcdcc24",
+      "name": "Merge Stage 2"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'completed', generation_run_id: $('Merge Stage 2').first().json.generation_run_id, messaging_output: $('Merge Stage 2').first().json.messaging_output, gtm_output: $('Merge Stage 2').first().json.gtm_output, seo_output: $('Merge Stage 2').first().json.seo_output, pdf_base64: $('PDFShift').first().json.base64 }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2704,
+        -16
+      ],
+      "id": "f874b0dc-c9de-4951-a2ef-e520e85dc9ec",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.messaging_body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1488,
+        0
+      ],
+      "id": "43609a1e-ec20-4040-8173-76a2ad4b8f5b",
+      "name": "OpenRouter - Messaging Agent",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "dIblh9Gy9dz11R6X",
+          "name": "OpenRouter Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nif (allItems.length === 0 || !allItems[0].json.agent) {\n  return [{ json: { _e: 1, _msg: 'No approved Stage 1 data found. Run Stage 1 first and approve it.' } }];\n}\nconst items = $input.all();\nconst positioning = items.find(i => i.json.agent === 'positioning');\nconst icp = items.find(i => i.json.agent === 'icp');\nconst marketingStage = items.find(i => i.json.marketing_stage)?.json.marketing_stage || 'Brand Awareness (Top of Funnel)';\nreturn [{\n  json: {\n    _e: 0,\n    generation_run_id: $('Webhook').first().json.body.generation_run_id,\n    company_name: $('Webhook').first().json.body.company_name || '',\n    marketing_stage: marketingStage,\n    positioning_output: positioning ? positioning.json.output : null,\n    icp_output: icp ? icp.json.output : null\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        528,
+        16
+      ],
+      "id": "487d8ef0-b082-41ae-9ca5-a84da6b2724c",
+      "name": "Reshape Data"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-e",
+              "leftValue": "={{ $json._e || 0 }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "guard-if-node-s2",
+      "name": "Data Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        736,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._msg }) }}",
+        "options": {
+          "responseCode": 404
+        }
+      },
+      "id": "not-found-resp-s2",
+      "name": "Not Found Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        944,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error?.message || 'Workflow execution failed. Please try again.' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "pp2-catch",
+      "name": "Catch Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1984,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Reshape Data').first().json;\n\nconst messagingBody = {\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2,\n  top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together', 'AtlasCloud', 'Venice'], allow_fallbacks: true },\n  messages: [\n    {\n      role: 'system',\n      content: 'You are an elite B2B messaging strategist. Output ONLY valid JSON. SCHEMA: {\"hero_headline\":\"string\",\"subheadline_value_prop\":\"string\",\"core_messaging_pillars\":[{\"pillar_title\":\"string\",\"supporting_copy\":\"string\"}],\"conversion_hook\":\"string\"}'\n    },\n    {\n      role: 'user',\n      content: 'Generate messaging for this company only. Company: ' + data.positioning_output.category_definition + ' Positioning: ' + data.positioning_output.positioning_statement + ' Pillars: ' + JSON.stringify(data.positioning_output.differentiation_pillars) + ' Persona: ' + data.icp_output.primary_target_persona + ' Buying triggers: ' + JSON.stringify(data.icp_output.buying_triggers) + ' Return JSON with hero_headline, subheadline_value_prop, core_messaging_pillars array of 3, conversion_hook.'\n    }\n  ]\n};\n\nconst gtmBody = {\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2,\n  top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together', 'AtlasCloud', 'Venice'], allow_fallbacks: true },\n  messages: [\n    {\n      role: 'system',\n      content: 'You are an elite B2B go-to-market strategist. Output ONLY valid JSON. SCHEMA: {\"primary_distribution_channels\":[\"string\"],\"launch_sequencing_playbook\":\"string\",\"growth_loops_identified\":[\"string\"],\"initial_30_day_milestones\":[\"string\"]}'\n    },\n    {\n      role: 'user',\n      content: 'Generate GTM strategy for this company only. Company: ' + data.positioning_output.category_definition + ' Positioning: ' + data.positioning_output.positioning_statement + ' Persona: ' + data.icp_output.primary_target_persona + ' Buying triggers: ' + JSON.stringify(data.icp_output.buying_triggers) + ' Return JSON with primary_distribution_channels, launch_sequencing_playbook, growth_loops_identified, initial_30_day_milestones.'\n    }\n  ]\n};\n\nconst seoBody = {\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2,\n  top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together', 'AtlasCloud', 'Venice'], allow_fallbacks: true },\n  messages: [\n    {\n      role: 'system',\n      content: 'You are an elite B2B SEO strategist. Output ONLY valid JSON. SCHEMA: {\"topical_authority_clusters\":[{\"core_pillar\":\"string\",\"sub_topics\":[\"string\"]}],\"aeo_citation_strategy\":\"string\",\"high_intent_search_queries\":[\"string\"]}'\n    },\n    {\n      role: 'user',\n      content: 'Generate SEO strategy for this company only. Company: ' + data.positioning_output.category_definition + ' Positioning: ' + data.positioning_output.positioning_statement + ' Persona: ' + data.icp_output.primary_target_persona + ' Return JSON with topical_authority_clusters, aeo_citation_strategy, high_intent_search_queries.'\n    }\n  ]\n};\n\nreturn [{\n  json: {\n    generation_run_id: data.generation_run_id,\n    messaging_body: messagingBody,\n    gtm_body: gtmBody,\n    seo_body: seoBody\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        944,
+        0
+      ],
+      "id": "5c0d956e-f4dc-44c6-9cab-899f1294eab1",
+      "name": "Build Prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Reshape Data').first().json;\nconst serperResults = $(' Serper ').first().json;\nconst marketingStage = data.marketing_stage || 'Brand Awareness (Top of Funnel)';\n\n// Extract top organic results from Serper\nconst organic = serperResults.organic || [];\nconst serpContext = organic.slice(0, 5).map((r, i) => \n  `${i+1}. ${r.title} — ${r.snippet}`\n).join('\\n');\n\n// Set funnel guidance based on marketing stage\nlet funnelGuidance = '';\nif (marketingStage.includes('Brand Awareness')) {\n  funnelGuidance = 'Focus on TOP OF FUNNEL queries: educational content, problem-awareness searches, broad category terms, \"what is\" and \"how to\" queries. Avoid bottom-funnel conversion terms.';\n} else if (marketingStage.includes('Mid Funnel') || marketingStage.includes('Lead Generation')) {\n  funnelGuidance = 'Focus on MID FUNNEL queries: comparison searches, alternative searches, solution-aware terms, \"best X for Y\" queries, competitor comparisons.';\n} else if (marketingStage.includes('Conversion') || marketingStage.includes('Bottom')) {\n  funnelGuidance = 'Focus on BOTTOM OF FUNNEL queries: high-intent purchase terms, \"buy X\", \"X pricing\", \"X vs Y\", free trial searches, demo request queries.';\n}\n\nconst seoBody = {\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2,\n  top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together', 'AtlasCloud', 'Venice'], allow_fallbacks: true },\n  messages: [\n    {\n      role: 'system',\n      content: 'You are an elite B2B SEO strategist. Output ONLY valid JSON. SCHEMA: {\"topical_authority_clusters\":[{\"core_pillar\":\"string\",\"sub_topics\":[\"string\"]}],\"aeo_citation_strategy\":\"string\",\"high_intent_search_queries\":[\"string\"]}'\n    },\n    {\n      role: 'user',\n      content: 'Generate SEO strategy for this company only. Company: ' + data.positioning_output.category_definition + ' Positioning: ' + data.positioning_output.positioning_statement + ' Persona: ' + data.icp_output.primary_target_persona + ' Marketing stage: ' + marketingStage + '\\n\\nFUNNEL GUIDANCE: ' + funnelGuidance + '\\n\\nReal Google SERP data for this market:\\n' + serpContext + '\\n\\nUse this real search data to identify actual queries and content gaps. Match all queries and clusters to the funnel stage specified. Return JSON with topical_authority_clusters, aeo_citation_strategy, high_intent_search_queries.'\n    }\n  ]\n};\n\nreturn [{ json: { seo_body: seoBody } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -160
+      ],
+      "id": "6cef7281-ec75-4b95-a7d1-982f5e95a6b6",
+      "name": "Build SEO Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://google.serper.dev/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"q\": \"{{ $('Reshape Data').first().json.company_name }} {{ $('Reshape Data').first().json.positioning_output.category_definition }} competitors alternatives\",\n  \"num\": 10,\n  \"gl\": \"us\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1104,
+        -144
+      ],
+      "id": "63bc8055-9be2-4eac-95e2-53b2232d84e1",
+      "name": " Serper ",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GBFtly5qoVWWSgpX",
+          "name": "Header Auth account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $('Build PDF HTML').first().json.insert_sql }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2528,
+        -16
+      ],
+      "id": "cfea6b3f-36be-400f-ad23-b5b2e469942d",
+      "name": "Persist Stage 2",
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $('Merge Stage 2').first()?.json || {};\nconst stage1 = $('Reshape Data').first()?.json || {};\n\nconst escapeHTML = (str) => {\n  if (!str) return '';\n  return String(str)\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n};\n\nconst positioning = stage1.positioning_output || {};\nconst icp = stage1.icp_output || {};\nconst messaging = data.messaging_output || {};\nconst gtm = data.gtm_output || {};\nconst seo = data.seo_output || {};\n\nconst companyName = escapeHTML(stage1.company_name || data.company_name || stage1.positioning_output?.company_name || 'Company');\nconst marketingStage = escapeHTML(stage1.marketing_stage || data.marketing_stage || 'Brand Awareness (Top of Funnel)');\n\n// ── Parse 3 stat fields from persona string\n// The ICP prompt explicitly forces \"age range (e.g. 28-45)\", \"company size\", \"seniority level\"\n// so these patterns are reliable against this specific prompt's output format\nconst personaRaw = icp.primary_target_persona || '';\n\nconst ageMatch = personaRaw.match(/age\\s*(?:range)?\\s*[:\\s]?\\s*(\\d{2}\\s*[-–]\\s*\\d{2}|\\d{2}\\+)/i);\nconst ageRange = ageMatch ? ageMatch[1].replace(/\\s/g, '') : '28–45';\n\nconst sizeMatch = personaRaw.match(/company\\s*size\\s*[:\\s]+([^,;.\\n]+)/i);\nconst companySize = sizeMatch ? sizeMatch[1].trim().replace(/employees?/i, '').trim() + ' employees' : 'SMB–Mid-market';\n\nconst seniorityMatch = personaRaw.match(/seniority\\s*(?:level)?\\s*[:\\s]+([^,;.\\n]+)/i);\nconst seniority = seniorityMatch ? seniorityMatch[1].trim() : 'IC / Team Lead';\n\n// ── Positioning pillars\nconst pillars = (positioning.differentiation_pillars || []);\nconst pillarsHTML = pillars.map((p, i) => `\n  <div class=\"pillar-card\">\n    <div class=\"pillar-num\">${String(i + 1).padStart(2, '0')}</div>\n    <div class=\"pillar-text\">${escapeHTML(p)}</div>\n  </div>\n`).join('');\n\n// ── ICP triggers — numbered cards only, no invented scores\nconst triggers = (icp.buying_triggers || []);\nconst triggersHTML = triggers.map((t, i) => `\n  <div class=\"trigger-card\">\n    <div class=\"trigger-index\">${i + 1}</div>\n    <div class=\"trigger-text\">${escapeHTML(t)}</div>\n  </div>`\n).join('');\n\nconst fears = (icp.customer_fears_and_risks || []);\nconst fearsHTML = fears.map(f =>\n  `<li class=\"fear-item\"><span class=\"fear-dot\">▸</span>${escapeHTML(f)}</li>`\n).join('');\n\n// ── Messaging pillars\nconst messagingPillars = (messaging.core_messaging_pillars || []).map((p, i) => `\n  <div class=\"msg-pillar\">\n    <div class=\"msg-pillar-header\">\n      <span class=\"msg-pillar-num\">${String(i + 1).padStart(2, '0')}</span>\n      <span class=\"msg-pillar-title\">${escapeHTML(p.pillar_title)}</span>\n    </div>\n    <p class=\"msg-pillar-body\">${escapeHTML(p.supporting_copy)}</p>\n  </div>\n`).join('');\n\n// ── GTM\nconst channels = (gtm.primary_distribution_channels || []);\nconst channelsHTML = channels.map(c => `<div class=\"channel-chip\">${escapeHTML(c)}</div>`).join('');\n\nconst milestones = (gtm.initial_30_day_milestones || []).slice(0, 4);\nconst milestonesHTML = milestones.map((m, i) => {\n  const labels = ['Day 7', 'Day 14', 'Day 21', 'Day 30'];\n  return `\n    <div class=\"milestone-block\">\n      <div class=\"milestone-marker\"></div>\n      <div class=\"milestone-label\">${labels[i] || `Week ${i + 1}`}</div>\n      <div class=\"milestone-text\">${escapeHTML(m)}</div>\n    </div>`;\n}).join('');\n\nconst loops = (gtm.growth_loops_identified || []).slice(0, 3);\nconst loopsHTML = loops.map(l =>\n  `<div class=\"loop-card\"><div class=\"loop-icon\">↺</div><div class=\"loop-text\">${escapeHTML(l)}</div></div>`\n).join('');\n\n// ── GTM funnel SVG — clean fixed layout\nconst CARD_W = 134;\nconst CARD_H = 112;\nconst GAP = 24;\nconst TOTAL_W = 4 * CARD_W + 3 * GAP;\nconst SVG_H = CARD_H + 90;\nconst midY = 30 + CARD_H / 2;\n\nconst funnelStages = [\n  { label: 'STAGE 1', title: 'Awareness',   bg: '#1a1a2e', titleColor: 'white',   subColor: 'rgba(255,255,255,0.55)', items: ['Outbound email', 'LinkedIn sequences', 'SEO content'] },\n  { label: 'STAGE 2', title: 'Acquisition', bg: '#0f4c3a', titleColor: 'white',   subColor: 'rgba(255,255,255,0.65)', items: ['Free tier sign-up', 'PLG onboarding', 'CRM integrations'] },\n  { label: 'STAGE 3', title: 'Activation',  bg: '#00a67e', titleColor: 'white',   subColor: 'rgba(255,255,255,0.82)', items: ['First summary sent', '3 calls recorded', 'Team invite sent'] },\n  { label: 'STAGE 4', title: 'Retention',   bg: '#00c9a7', titleColor: '#1a1a2e', subColor: 'rgba(26,26,46,0.62)',   items: ['Viral team sharing', 'Company rollout', 'Analytics upsell'] }\n];\n\nconst funnelSVGParts = funnelStages.map((s, i) => {\n  const x = i * (CARD_W + GAP);\n  const cardY = 30;\n  const cx = x + CARD_W / 2;\n\n  const dividerColor = s.title === 'Retention' ? 'rgba(26,26,46,0.12)' : 'rgba(255,255,255,0.1)';\n  const itemY = cardY + 52;\n\n  const itemLines = s.items.map((item, ii) =>\n    `<text x=\"${cx}\" y=\"${itemY + ii * 16}\" text-anchor=\"middle\" style=\"font-family:'Helvetica Neue',Arial,sans-serif;font-size:9px;fill:${s.subColor};\">${escapeHTML(item)}</text>`\n  ).join('');\n\n  const arrow = i < 3 ? `<line x1=\"${x + CARD_W + 4}\" y1=\"${midY}\" x2=\"${x + CARD_W + GAP - 5}\" y2=\"${midY}\" stroke=\"#d1d5db\" stroke-width=\"1.5\" marker-end=\"url(#arw)\"/>` : '';\n\n  return `\n    <text x=\"${cx}\" y=\"18\" text-anchor=\"middle\" style=\"font-family:'Helvetica Neue',Arial,sans-serif;font-size:7.5px;font-weight:700;fill:#9ca3af;letter-spacing:1.5px;\">${s.label}</text>\n    <rect x=\"${x}\" y=\"${cardY}\" width=\"${CARD_W}\" height=\"${CARD_H}\" rx=\"6\" fill=\"${s.bg}\"/>\n    <text x=\"${cx}\" y=\"${cardY + 22}\" text-anchor=\"middle\" style=\"font-family:'Helvetica Neue',Arial,sans-serif;font-size:12px;font-weight:800;fill:${s.titleColor};\">${s.title}</text>\n    <line x1=\"${x + 16}\" y1=\"${cardY + 31}\" x2=\"${x + CARD_W - 16}\" y2=\"${cardY + 31}\" stroke=\"${dividerColor}\" stroke-width=\"1\"/>\n    ${itemLines}\n    ${arrow}`;\n}).join('');\n\n// Loop arc below cards\nconst arcY1 = 30 + CARD_H + 6;\nconst arcYMid = arcY1 + 26;\nconst arcX1 = 3 * (CARD_W + GAP) + CARD_W / 2;\nconst arcX2 = CARD_W / 2;\n\nconst gtmFunnelSVG = `<svg viewBox=\"0 0 ${TOTAL_W} ${SVG_H}\" xmlns=\"http://www.w3.org/2000/svg\" width=\"${TOTAL_W}\" height=\"${SVG_H}\" style=\"max-width:100%;display:block;\">\n  <defs>\n    <marker id=\"arw\" markerWidth=\"6\" markerHeight=\"6\" refX=\"5\" refY=\"3\" orient=\"auto\"><path d=\"M0,0 L0,6 L6,3 z\" fill=\"#d1d5db\"/></marker>\n    <marker id=\"arw-teal\" markerWidth=\"8\" markerHeight=\"8\" refX=\"7\" refY=\"4\" orient=\"auto\"><path d=\"M0,0 L0,8 L8,4 z\" fill=\"#00c9a7\"/></marker>\n  </defs>\n  ${funnelSVGParts}\n  <path d=\"M ${arcX1},${arcY1} Q ${arcX1},${arcYMid} ${(arcX1+arcX2)/2},${arcYMid} Q ${arcX2},${arcYMid} ${arcX2},${arcY1}\"\n    fill=\"none\" stroke=\"#00c9a7\" stroke-width=\"1.5\" stroke-dasharray=\"4,3\" marker-end=\"url(#arw-teal)\"/>\n  <text x=\"${(arcX1+arcX2)/2}\" y=\"${arcYMid + 14}\" text-anchor=\"middle\"\n    style=\"font-family:'Helvetica Neue',Arial,sans-serif;font-size:8.5px;fill:#00a67e;font-weight:600;\">↺ Viral loop: shared recording → new sign-up → team adoption</text>\n</svg>`;\n\n// ── SEO intent badges — inferred from query structure, no invented numbers\nconst intentBadge = (q) => {\n  const l = q.toLowerCase();\n  if (/\\bvs\\b|compare|alternative|best .* for|top .* tool/.test(l)) return { label: 'Comparison',    bg: '#fef3c7', color: '#92400e' };\n  if (/how to|what is|why |guide|tips|learn/.test(l))               return { label: 'Informational', bg: '#eff6ff', color: '#1e40af' };\n  if (/pricing|free|cost|plan|sign up|download|get started/.test(l)) return { label: 'Transactional', bg: '#f0fdf4', color: '#166534' };\n  if (/\\b(fathom|notion|loom|otter|fireflies|read ai|fellow)\\b/.test(l)) return { label: 'Navigational', bg: '#fdf4ff', color: '#7e22ce' };\n  return { label: 'High Intent', bg: '#e6faf6', color: '#0d7a60' };\n};\n\nconst seoQueries = (seo.high_intent_search_queries || []);\nconst seoQueriesHTML = seoQueries.map((q, i) => {\n  const badge = intentBadge(q);\n  return `\n  <div class=\"query-row\">\n    <span class=\"query-rank\">${String(i + 1).padStart(2, '0')}</span>\n    <span class=\"query-text\">${escapeHTML(q)}</span>\n    <span class=\"intent-badge\" style=\"background:${badge.bg};color:${badge.color};\">${badge.label}</span>\n  </div>`;\n}).join('');\n\nconst seoClusters = (seo.topical_authority_clusters || []).map(c => `\n  <div class=\"seo-cluster\">\n    <div class=\"seo-cluster-title\">${escapeHTML(c.core_pillar)}</div>\n    <div class=\"seo-tags\">${(c.sub_topics || []).map(s => `<span class=\"seo-tag\">${escapeHTML(s)}</span>`).join('')}</div>\n  </div>\n`).join('');\n\nconst date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });\n\nconst stageColorMap = { 'brand awareness': '#7c5cbf', 'lead generation': '#00a67e', 'conversion': '#d4720c', 'retention': '#1a6fb5' };\nconst stageLower = marketingStage.toLowerCase();\nlet stageBg = '#4a5568';\nfor (const [k, v] of Object.entries(stageColorMap)) { if (stageLower.includes(k)) { stageBg = v; break; } }\n\n// ── Section icons\nconst iconPositioning = `<svg width=\"28\" height=\"28\" viewBox=\"0 0 32 32\" fill=\"none\"><circle cx=\"16\" cy=\"16\" r=\"14\" stroke=\"#00c9a7\" stroke-width=\"2\"/><circle cx=\"16\" cy=\"16\" r=\"8\" stroke=\"#00c9a7\" stroke-width=\"1.5\" stroke-dasharray=\"3 2\"/><circle cx=\"16\" cy=\"16\" r=\"2.5\" fill=\"#00c9a7\"/><line x1=\"16\" y1=\"2\" x2=\"16\" y2=\"7\" stroke=\"#00c9a7\" stroke-width=\"2\" stroke-linecap=\"round\"/><line x1=\"16\" y1=\"25\" x2=\"16\" y2=\"30\" stroke=\"#00c9a7\" stroke-width=\"2\" stroke-linecap=\"round\"/><line x1=\"2\" y1=\"16\" x2=\"7\" y2=\"16\" stroke=\"#00c9a7\" stroke-width=\"2\" stroke-linecap=\"round\"/><line x1=\"25\" y1=\"16\" x2=\"30\" y2=\"16\" stroke=\"#00c9a7\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>`;\nconst iconICP = `<svg width=\"28\" height=\"28\" viewBox=\"0 0 32 32\" fill=\"none\"><circle cx=\"16\" cy=\"11\" r=\"5.5\" stroke=\"#00c9a7\" stroke-width=\"2\"/><path d=\"M5 27c0-6.075 4.925-11 11-11s11 4.925 11 11\" stroke=\"#00c9a7\" stroke-width=\"2\" stroke-linecap=\"round\"/><path d=\"M23 14l2 2 4-4\" stroke=\"#00c9a7\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>`;\nconst iconMessaging = `<svg width=\"28\" height=\"28\" viewBox=\"0 0 32 32\" fill=\"none\"><rect x=\"3\" y=\"5\" width=\"22\" height=\"15\" rx=\"3\" stroke=\"#00c9a7\" stroke-width=\"2\"/><path d=\"M3 17l6 6v-6\" stroke=\"#00c9a7\" stroke-width=\"2\" stroke-linejoin=\"round\"/><line x1=\"8\" y1=\"10\" x2=\"20\" y2=\"10\" stroke=\"#00c9a7\" stroke-width=\"1.8\" stroke-linecap=\"round\"/><line x1=\"8\" y1=\"14\" x2=\"16\" y2=\"14\" stroke=\"#00c9a7\" stroke-width=\"1.8\" stroke-linecap=\"round\"/></svg>`;\nconst iconGTM = `<svg width=\"28\" height=\"28\" viewBox=\"0 0 32 32\" fill=\"none\"><path d=\"M8 6L16 3L24 6L27 14L16 20L5 14Z\" stroke=\"#00c9a7\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/><circle cx=\"16\" cy=\"11\" r=\"2.5\" fill=\"#00c9a7\"/><path d=\"M16 20L16 28\" stroke=\"#00c9a7\" stroke-width=\"2\" stroke-linecap=\"round\"/><path d=\"M12 25l4 3 4-3\" stroke=\"#00c9a7\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/></svg>`;\nconst iconSEO = `<svg width=\"28\" height=\"28\" viewBox=\"0 0 32 32\" fill=\"none\"><circle cx=\"14\" cy=\"14\" r=\"9\" stroke=\"#00c9a7\" stroke-width=\"2\"/><line x1=\"21\" y1=\"21\" x2=\"28\" y2=\"28\" stroke=\"#00c9a7\" stroke-width=\"2.5\" stroke-linecap=\"round\"/><line x1=\"10\" y1=\"14\" x2=\"18\" y2=\"14\" stroke=\"#00c9a7\" stroke-width=\"1.8\" stroke-linecap=\"round\"/><line x1=\"14\" y1=\"10\" x2=\"14\" y2=\"18\" stroke=\"#00c9a7\" stroke-width=\"1.8\" stroke-linecap=\"round\"/></svg>`;\n\nconst html = `<!DOCTYPE html>\n<html>\n<head>\n<meta charset=\"UTF-8\">\n<style>\n  * { margin: 0; padding: 0; box-sizing: border-box; }\n  body { font-family: Georgia, 'Times New Roman', serif; color: #1a1a2e; background: white; font-size: 13px; line-height: 1.6; }\n\n  /* ── COVER — table layout for reliable PDF rendering ── */\n .cover { background: #1a1a2e; color: white; width: 100%; height: 1122px; page-break-after: always; border-left: 6px solid #00c9a7; position: relative; }\n  .cover-teal-bar { display: none; }\n  .cover-geo-1 { display: none; }\n  .cover-geo-2 { display: none; }\n  .cover-geo-3 { display: none; }\n  .cover-geo-4 { display: none; }\n  .cover-brand { padding: 32px 60px 0 66px; display: flex; align-items: center; gap: 12px; }\n  .cover-brand-logo { width: 30px; height: 30px; background: #00c9a7; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 900; font-size: 13px; color: #1a1a2e; }\n  .cover-brand-name { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.4); }\n  .cover-main { padding: 320px 60px 80px 72px; }\n  .cover-report-type { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: #00c9a7; margin-bottom: 16px; }\n  .cover-company { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 68px; font-weight: 800; line-height: 1; color: white; margin-bottom: 14px; letter-spacing: -3px; }\n  .cover-subtitle { font-family: Georgia, serif; font-size: 20px; color: rgba(255,255,255,0.45); font-style: italic; margin-bottom: 32px; }\n  .cover-stage-badge { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; background: ${stageBg}; border-radius: 4px; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 600; color: white; }\n  .cover-stage-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.7); display: inline-block; }\n.cover-toc { padding: 20px 60px 20px 72px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; position: absolute; bottom: 60px; left: 0; right: 0; }\n  .cover-toc-item { flex: 1; padding: 0 16px; border-left: 1px solid rgba(255,255,255,0.07); }\n  .cover-toc-item:first-child { border-left: none; padding-left: 0; }\n  .cover-toc-num { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; color: #00c9a7; font-weight: 700; margin-bottom: 3px; }\n  .cover-toc-label { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; color: rgba(255,255,255,0.35); }\n  .cover-date { padding: 12px 60px 24px 72px; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; color: rgba(255,255,255,0.2); letter-spacing: 1px; position: absolute; bottom: 0; left: 0; right: 0; }\n\n  /* ── SECTION SHELL ── */\n  .section-page { padding: 44px 60px 40px 60px; page-break-before: always; }\n  .section-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; padding-bottom: 18px; border-bottom: 1px solid #e5e7eb; }\n  .section-icon-wrap { width: 46px; height: 46px; background: #f0fdf9; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }\n  .section-big-num { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; font-weight: 700; color: #00c9a7; letter-spacing: 2px; margin-bottom: 1px; }\n  .section-eyebrow { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #9ca3af; margin-bottom: 2px; }\n  .section-title { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 23px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px; }\n  .page-footer { margin-top: 28px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-between; }\n  .footer-brand { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #d1d5db; }\n  .footer-co { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; color: #d1d5db; }\n  .lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #9ca3af; margin-bottom: 10px; }\n\n  /* ── POSITIONING ── */\n  .pos-stmt { background: #1a1a2e; border-radius: 8px; padding: 26px 30px; margin-bottom: 18px; position: relative; overflow: hidden; }\n  .pos-stmt::before { content: '\"'; position: absolute; top: -10px; left: 20px; font-size: 120px; color: #00c9a7; opacity: 0.12; font-family: Georgia, serif; line-height: 1; }\n  .pos-stmt-lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #00c9a7; margin-bottom: 10px; }\n  .pos-stmt-txt { font-family: Georgia, serif; font-size: 14px; line-height: 1.75; color: rgba(255,255,255,0.88); position: relative; z-index: 1; }\n  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }\n  .box { background: #f8f7f4; border-radius: 8px; padding: 16px 20px; }\n  .box-lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #9ca3af; margin-bottom: 8px; }\n  .box-txt { font-family: Georgia, serif; font-size: 13px; color: #374151; line-height: 1.6; }\n  .pillars-wrap { background: #f8f7f4; border-radius: 8px; padding: 16px 20px; }\n  .pillar-card { display: flex; gap: 14px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }\n  .pillar-card:last-child { border-bottom: none; }\n  .pillar-num { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 900; color: #00a67e; flex-shrink: 0; width: 24px; padding-top: 2px; }\n  .pillar-text { font-family: Georgia, serif; font-size: 13px; color: #374151; line-height: 1.6; }\n\n  /* ── ICP ── */\n  .icp-persona-card { background: #1a1a2e; border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; position: relative; overflow: hidden; }\n  .icp-persona-card::after { content: ''; position: absolute; right: -20px; top: -20px; width: 120px; height: 120px; border: 20px solid rgba(0,201,167,0.08); border-radius: 50%; }\n  .icp-persona-lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #00c9a7; margin-bottom: 10px; }\n  .icp-persona-txt { font-family: Georgia, serif; font-size: 13px; line-height: 1.7; color: rgba(255,255,255,0.88); position: relative; z-index: 1; }\n\n  /* 3-column stat row */\n  .stat-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }\n  .stat-card { background: #f8f7f4; border-radius: 8px; padding: 12px 14px; text-align: center; border-top: 3px solid #00c9a7; }\n  .stat-label { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 8.5px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #9ca3af; margin-bottom: 8px; }\n  .stat-value { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 18px; font-weight: 800; color: #1a1a2e; letter-spacing: -0.5px; line-height: 1.1; }\n\n  /* Triggers */\n  .trigger-card { background: #f8f7f4; border-radius: 8px; padding: 9px 14px; margin-bottom: 6px; display: flex; gap: 12px; align-items: flex-start; border-left: 3px solid #00c9a7; }\n  .trigger-index { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 18px; font-weight: 900; color: #00c9a7; opacity: 0.4; line-height: 1; flex-shrink: 0; width: 22px; padding-top: 2px; }\n  .trigger-text { font-family: Georgia, serif; font-size: 12.5px; color: #374151; line-height: 1.6; }\n\n  .icp-bottom-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; page-break-inside: avoid; }\n  .fears-box { background: #fff5f5; border-radius: 8px; padding: 16px 18px; border-left: 4px solid #e57373; }\n  .fears-lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #c0392b; margin-bottom: 10px; }\n  .fear-item { list-style: none; display: flex; gap: 7px; align-items: flex-start; margin-bottom: 5px; font-family: Georgia, serif; font-size: 12px; color: #374151; line-height: 1.5; }\n  .fear-dot { color: #e57373; flex-shrink: 0; font-size: 10px; padding-top: 2px; }\n  .economic-buyer { background: #1a1a2e; border-radius: 8px; padding: 16px 18px; display: flex; gap: 12px; align-items: flex-start; }\n  .eb-icon { width: 32px; height: 32px; background: #00c9a7; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-family: 'Helvetica Neue', Arial, sans-serif; font-weight: 900; font-size: 13px; color: #1a1a2e; }\n  .eb-lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: #00c9a7; margin-bottom: 5px; }\n  .eb-txt { font-family: Georgia, serif; font-size: 12.5px; color: rgba(255,255,255,0.82); line-height: 1.6; }\n\n  /* ── MESSAGING ── */\n  .hero-block { background: #1a1a2e; border-radius: 10px; padding: 28px 32px; margin-bottom: 18px; position: relative; overflow: hidden; }\n  .hero-block::before { content: ''; position: absolute; bottom: -30px; right: -30px; width: 160px; height: 160px; border: 25px solid rgba(0,201,167,0.07); border-radius: 50%; }\n  .hero-hl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 27px; font-weight: 800; color: white; line-height: 1.15; letter-spacing: -0.5px; margin-bottom: 12px; position: relative; z-index: 1; }\n  .hero-sub { font-family: Georgia, serif; font-size: 14px; color: rgba(255,255,255,0.62); line-height: 1.65; position: relative; z-index: 1; max-width: 82%; }\n  .msg-pillar { background: #f8f7f4; border-radius: 8px; padding: 14px 18px; margin-bottom: 10px; display: block; }\n  .msg-pillar-header { margin-bottom: 6px; display: flex; align-items: center; gap: 10px; }\n  .msg-pillar-num { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; font-weight: 900; color: #00a67e; flex-shrink: 0; }\n  .msg-pillar-title { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11.5px; font-weight: 700; color: #1a1a2e; line-height: 1.25; }\n  .msg-pillar-body { font-family: Georgia, serif; font-size: 12.5px; color: #374151; line-height: 1.65; }\n  .conv-hook { background: #00c9a7; border-radius: 8px; padding: 18px 22px; margin-top: 6px; }\n  .ch-lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: rgba(26,26,46,0.55); margin-bottom: 7px; }\n  .ch-txt { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 14px; font-weight: 700; color: #1a1a2e; line-height: 1.4; }\n\n  /* ── GTM ── */\n  .channel-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 20px; }\n  .channel-chip { padding: 5px 13px; background: #1a1a2e; color: rgba(255,255,255,0.82); border-radius: 4px; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 500; }\n  .funnel-wrap { margin-bottom: 22px; overflow: hidden; }\n  .timeline { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; position: relative; margin-bottom: 18px; }\n  .timeline::before { content: ''; position: absolute; top: 11px; left: 12px; right: 12px; height: 2px; background: #e5e7eb; z-index: 0; }\n  .milestone-block { display: flex; flex-direction: column; align-items: center; position: relative; z-index: 1; padding: 0 6px; }\n  .milestone-marker { width: 22px; height: 22px; background: #00c9a7; border-radius: 50%; margin-bottom: 8px; border: 3px solid white; box-shadow: 0 0 0 2px #00c9a7; flex-shrink: 0; }\n  .milestone-label { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; font-weight: 800; color: #00a67e; margin-bottom: 5px; text-align: center; }\n  .milestone-text { font-family: Georgia, serif; font-size: 11px; color: #374151; line-height: 1.5; text-align: center; }\n  .loop-card { background: #f8f7f4; border-radius: 8px; padding: 8px 12px; display: flex; gap: 10px; align-items: flex-start; margin-bottom: 4px; page-break-inside: avoid; }\n  .loop-icon { font-size: 15px; color: #00a67e; flex-shrink: 0; }\n  .loop-text { font-family: Georgia, serif; font-size: 12.5px; color: #374151; line-height: 1.6; }\n  .playbook-box { background: #f8f7f4; border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; page-break-inside: avoid; }\n  .playbook-txt { font-family: Georgia, serif; font-size: 12.5px; color: #374151; line-height: 1.7; }\n\n  /* ── SEO ── */\n  .seo-cluster { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e5e7eb; }\n  .seo-cluster:last-child { border-bottom: none; }\n  .seo-cluster-title { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; font-weight: 700; color: #1a1a2e; margin-bottom: 9px; display: flex; align-items: center; gap: 8px; }\n  .seo-cluster-title::before { content: ''; display: inline-block; width: 9px; height: 9px; background: #00c9a7; border-radius: 2px; flex-shrink: 0; }\n  .seo-tags { display: flex; flex-wrap: wrap; gap: 4px; }\n  .seo-tag { padding: 2px 8px; background: #e6faf6; border-radius: 3px; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9.5px; color: #0d7a60; font-weight: 500; }\n  .query-row { display: flex; align-items: center; gap: 10px; padding: 5px 10px; background: #f8f7f4; border-radius: 4px; margin-bottom: 3px; }\n  .query-rank { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 900; color: #9ca3af; flex-shrink: 0; width: 18px; }\n  .query-text { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 11px; color: #374151; flex: 1; }\n  .intent-badge { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 600; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; white-space: nowrap; }\n  .aeo-box { background: #1a1a2e; border-radius: 8px; padding: 14px 18px; margin-top: 10px; page-break-before: avoid; page-break-inside: avoid; }\n  .aeo-lbl { font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 9px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: #00c9a7; margin-bottom: 8px; }\n  .aeo-txt { font-family: Georgia, serif; font-size: 13px; color: rgba(255,255,255,0.8); line-height: 1.65; }\n  .seo-warning { margin-top: 8px; padding: 8px 12px; background: #fffbea; border-left: 3px solid #f59e0b; border-radius: 0 6px 6px 0; font-family: 'Helvetica Neue', Arial, sans-serif; font-size: 10px; color: #92400e; page-break-before: avoid; }\n</style>\n</head>\n<body>\n\n<!-- ═══ COVER ═══ -->\n<div class=\"cover\">\n  <div class=\"cover-teal-bar\"></div>\n  <div class=\"cover-geo-1\"></div><div class=\"cover-geo-2\"></div><div class=\"cover-geo-3\"></div><div class=\"cover-geo-4\"></div>\n  <div class=\"cover-brand\">\n    <div class=\"cover-brand-logo\">PP</div>\n    <div class=\"cover-brand-name\">PositionPilot</div>\n  </div>\n  <div class=\"cover-main\">\n    <div class=\"cover-report-type\">GTM Strategy Report</div>\n    <div class=\"cover-company\">${companyName}</div>\n    <div class=\"cover-subtitle\">Strategic Positioning &amp; Go-To-Market Blueprint</div>\n    <div class=\"cover-stage-badge\"><span class=\"cover-stage-dot\"></span>${marketingStage}</div>\n  </div>\n  <div class=\"cover-toc\">\n    <div class=\"cover-toc-item\"><div class=\"cover-toc-num\">01</div><div class=\"cover-toc-label\">Positioning</div></div>\n    <div class=\"cover-toc-item\"><div class=\"cover-toc-num\">02</div><div class=\"cover-toc-label\">Ideal Customer Profile</div></div>\n    <div class=\"cover-toc-item\"><div class=\"cover-toc-num\">03</div><div class=\"cover-toc-label\">Messaging Framework</div></div>\n    <div class=\"cover-toc-item\"><div class=\"cover-toc-num\">04</div><div class=\"cover-toc-label\">Go-To-Market Strategy</div></div>\n    <div class=\"cover-toc-item\"><div class=\"cover-toc-num\">05</div><div class=\"cover-toc-label\">SEO &amp; AEO Strategy</div></div>\n  </div>\n  <div class=\"cover-date\">${date} &nbsp;·&nbsp; Confidential &nbsp;·&nbsp; Generated by PositionPilot AI</div>\n</div>\n\n<!-- ═══ SECTION 1 — POSITIONING ═══ -->\n<div class=\"section-page\">\n  <div class=\"section-header\">\n    <div class=\"section-icon-wrap\">${iconPositioning}</div>\n    <div class=\"section-header-text\">\n      <div class=\"section-big-num\">SECTION 01</div>\n      <div class=\"section-eyebrow\">Market Strategy</div>\n      <div class=\"section-title\">Positioning</div>\n    </div>\n  </div>\n  <div class=\"pos-stmt\">\n    <div class=\"pos-stmt-lbl\">Positioning Statement</div>\n    <div class=\"pos-stmt-txt\">${escapeHTML(positioning.positioning_statement)}</div>\n  </div>\n  <div class=\"two-col\">\n    <div class=\"box\"><div class=\"box-lbl\">Category Definition</div><div class=\"box-txt\">${escapeHTML(positioning.category_definition)}</div></div>\n    <div class=\"box\"><div class=\"box-lbl\">Market Framing Strategy</div><div class=\"box-txt\">${escapeHTML(positioning.market_framing_strategy)}</div></div>\n  </div>\n  <div class=\"pillars-wrap\">\n    <div class=\"box-lbl\" style=\"margin-bottom:10px;\">Differentiation Pillars</div>\n    ${pillarsHTML}\n  </div>\n  <div class=\"page-footer\"><div class=\"footer-brand\">PositionPilot</div><div class=\"footer-co\">${companyName} — Confidential</div></div>\n</div>\n\n<!-- ═══ SECTION 2 — ICP ═══ -->\n<div class=\"section-page\">\n  <div class=\"section-header\">\n    <div class=\"section-icon-wrap\">${iconICP}</div>\n    <div class=\"section-header-text\">\n      <div class=\"section-big-num\">SECTION 02</div>\n      <div class=\"section-eyebrow\">Target Audience</div>\n      <div class=\"section-title\">Ideal Customer Profile</div>\n    </div>\n  </div>\n\n  <div class=\"icp-persona-card\">\n    <div class=\"icp-persona-lbl\">Primary Target Persona</div>\n    <div class=\"icp-persona-txt\">${escapeHTML(icp.primary_target_persona)}</div>\n  </div>\n\n  <div class=\"stat-row\">\n    <div class=\"stat-card\">\n      <div class=\"stat-label\">Age Range</div>\n      <div class=\"stat-value\">${escapeHTML(ageRange)}</div>\n    </div>\n    <div class=\"stat-card\">\n      <div class=\"stat-label\">Company Size</div>\n      <div class=\"stat-value\">${escapeHTML(companySize)}</div>\n    </div>\n    <div class=\"stat-card\">\n      <div class=\"stat-label\">Seniority Level</div>\n      <div class=\"stat-value\" style=\"font-size:14px;\">${escapeHTML(seniority)}</div>\n    </div>\n  </div>\n\n  <div class=\"lbl\">Buying Triggers</div>\n  ${triggersHTML}\n\n  <div class=\"icp-bottom-row\">\n    <div class=\"fears-box\">\n      <div class=\"fears-lbl\">Customer Fears &amp; Risks</div>\n      <ul style=\"list-style:none;\">${fearsHTML}</ul>\n    </div>\n    <div class=\"economic-buyer\">\n      <div class=\"eb-icon\">$</div>\n      <div>\n        <div class=\"eb-lbl\">Economic Buyer</div>\n        <div class=\"eb-txt\">${escapeHTML(icp.economic_buyer_profile)}</div>\n      </div>\n    </div>\n  </div>\n\n  <div class=\"page-footer\"><div class=\"footer-brand\">PositionPilot</div><div class=\"footer-co\">${companyName} — Confidential</div></div>\n</div>\n\n<!-- ═══ SECTION 3 — MESSAGING ═══ -->\n<div class=\"section-page\">\n  <div class=\"section-header\">\n    <div class=\"section-icon-wrap\">${iconMessaging}</div>\n    <div class=\"section-header-text\">\n      <div class=\"section-big-num\">SECTION 03</div>\n      <div class=\"section-eyebrow\">Brand Voice</div>\n      <div class=\"section-title\">Messaging Framework</div>\n    </div>\n  </div>\n  <div class=\"hero-block\">\n    <div class=\"hero-hl\">${escapeHTML(messaging.hero_headline)}</div>\n    <div class=\"hero-sub\">${escapeHTML(messaging.subheadline_value_prop)}</div>\n  </div>\n  ${messagingPillars}\n  <div class=\"conv-hook\">\n    <div class=\"ch-lbl\">Conversion Hook</div>\n    <div class=\"ch-txt\">${escapeHTML(messaging.conversion_hook)}</div>\n  </div>\n  <div class=\"page-footer\"><div class=\"footer-brand\">PositionPilot</div><div class=\"footer-co\">${companyName} — Confidential</div></div>\n</div>\n\n<!-- ═══ SECTION 4 — GTM ═══ -->\n<div class=\"section-page\">\n  <div class=\"section-header\">\n    <div class=\"section-icon-wrap\">${iconGTM}</div>\n    <div class=\"section-header-text\">\n      <div class=\"section-big-num\">SECTION 04</div>\n      <div class=\"section-eyebrow\">Execution Plan</div>\n      <div class=\"section-title\">Go-To-Market Strategy</div>\n    </div>\n  </div>\n  <div class=\"lbl\">Acquisition Funnel — Standard PLG Framework</div>\n  <div class=\"funnel-wrap\">${gtmFunnelSVG}</div>\n  <div class=\"lbl\">Primary Distribution Channels</div>\n  <div class=\"channel-chips\">${channelsHTML}</div>\n  <div class=\"lbl\">30-Day Launch Milestones</div>\n  <div class=\"timeline\">${milestonesHTML}</div>\n  <div class=\"playbook-box\">\n    <div class=\"lbl\" style=\"margin-bottom:8px;\">Launch Sequencing Playbook</div>\n    <div class=\"playbook-txt\">${escapeHTML(gtm.launch_sequencing_playbook)}</div>\n  </div>\n  ${loops.length > 0 ? `<div class=\"lbl\" style=\"margin-top:10px;\">Growth Loops</div>${loopsHTML}` : ''}\n  <div class=\"page-footer\"><div class=\"footer-brand\">PositionPilot</div><div class=\"footer-co\">${companyName} — Confidential</div></div>\n</div>\n\n<!-- ═══ SECTION 5 — SEO & AEO ═══ -->\n<div class=\"section-page\">\n  <div class=\"section-header\">\n    <div class=\"section-icon-wrap\">${iconSEO}</div>\n    <div class=\"section-header-text\">\n      <div class=\"section-big-num\">SECTION 05</div>\n      <div class=\"section-eyebrow\">Search &amp; Discovery</div>\n      <div class=\"section-title\">SEO &amp; AEO Strategy</div>\n    </div>\n  </div>\n  <div class=\"lbl\" style=\"margin-bottom:8px;\">Topical Authority Clusters</div>\n  ${seoClusters}\n  <div class=\"lbl\" style=\"margin-top:12px;\">High-Intent Search Queries</div>\n  ${seoQueriesHTML}\n  <div class=\"aeo-box\">\n    <div class=\"aeo-lbl\">AEO Citation Strategy</div>\n    <div class=\"aeo-txt\">${escapeHTML(seo.aeo_citation_strategy)}</div>\n  </div>\n  <div class=\"seo-warning\">\n    ⚠ No search volume data shown. Intent categories are inferred from query structure. Add a ranking metrics integration to surface real volume data.\n  </div>\n  <div class=\"page-footer\"><div class=\"footer-brand\">PositionPilot</div><div class=\"footer-co\">${companyName} — Confidential</div></div>\n</div>\n\n</body>\n</html>`;\n\nconst genId = escapeHTML(data.generation_run_id || 'unknown_run_id');\nconst msgEscaped = JSON.stringify(messaging).replace(/'/g, \"''\");\nconst gtmEscaped = JSON.stringify(gtm).replace(/'/g, \"''\");\nconst seoEscaped = JSON.stringify(seo).replace(/'/g, \"''\");\n\nconst insertSql = `INSERT INTO strategy_runs (generation_run_id, agent, output, model_used, status) VALUES ('${genId}', 'messaging', '${msgEscaped}'::jsonb, 'deepseek/deepseek-v4-flash', 'completed'), ('${genId}', 'gtm', '${gtmEscaped}'::jsonb, 'deepseek/deepseek-v4-flash', 'completed'), ('${genId}', 'seo', '${seoEscaped}'::jsonb, 'deepseek/deepseek-v4-flash', 'completed')`;\n\nconst pdfBodyString = JSON.stringify({ source: html, landscape: false, use_print: false });\n\nreturn [{ json: { pdf_body_string: pdfBodyString, insert_sql: insertSql, company_name: companyName, generation_run_id: genId } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        -16
+      ],
+      "id": "38955d31-dea4-44ba-a82e-9fac2ff05056",
+      "name": "Build PDF HTML"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.pdfshift.io/v3/convert/pdf",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ $json.pdf_body_string }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2336,
+        -16
+      ],
+      "id": "32ffc4b1-8d3e-455b-b615-acf4836ce73a",
+      "name": "PDFShift",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "GBFtly5qoVWWSgpX",
+          "name": "Header Auth account 2"
+        },
+        "httpBasicAuth": {
+          "id": "ADKpVoz689aGeV12",
+          "name": "pdf"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Webhook": [
+      {
+        "json": {
+          "headers": {
+            "host": "blabber-ahead-defective.ngrok-free.dev",
+            "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+            "content-length": "124",
+            "accept": "*/*",
+            "accept-encoding": "gzip, deflate, br, zstd",
+            "accept-language": "en-GB,en-US;q=0.9,en;q=0.8",
+            "content-type": "application/json",
+            "origin": "https://positionpilot.lovable.app",
+            "priority": "u=1, i",
+            "referer": "https://positionpilot.lovable.app/",
+            "sec-ch-ua": "\"Google Chrome\";v=\"149\", \"Chromium\";v=\"149\", \"Not)A;Brand\";v=\"24\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"macOS\"",
+            "sec-fetch-dest": "empty",
+            "sec-fetch-mode": "cors",
+            "sec-fetch-site": "cross-site",
+            "x-forwarded-for": "2409:4091:903f:17:6423:7173:694a:838f",
+            "x-forwarded-host": "blabber-ahead-defective.ngrok-free.dev",
+            "x-forwarded-proto": "https"
+          },
+          "params": {},
+          "query": {},
+          "body": {
+            "generation_run_id": "383",
+            "company_name": "kosaksiasapugazhexperiments",
+            "marketing_stage": "Brand Awareness (Top of Funnel)"
+          },
+          "webhookUrl": "http://localhost:5678/webhook/positionpilot-stage2",
+          "executionMode": "production"
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": " Read Approved Foundation.",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Read Approved Foundation.": {
+      "main": [
+        [
+          {
+            "node": "Reshape Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " OpenRouter - GTM Agent": {
+      "main": [
+        [
+          {
+            "node": "GTM JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " OpenRouter - SEO Agent": {
+      "main": [
+        [
+          {
+            "node": " SEO JSON Gate ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Messaging JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 2",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GTM JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 2",
+            "type": "main",
+            "index": 2
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " SEO JSON Gate ": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Stage 2": {
+      "main": [
+        [
+          {
+            "node": "Build PDF HTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter - Messaging Agent": {
+      "main": [
+        [
+          {
+            "node": " Messaging JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reshape Data": {
+      "main": [
+        [
+          {
+            "node": "Data Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Found?": {
+      "main": [
+        [
+          {
+            "node": "Build Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not Found Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompts": {
+      "main": [
+        [
+          {
+            "node": "OpenRouter - Messaging Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": " OpenRouter - GTM Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": " Serper ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build SEO Prompt": {
+      "main": [
+        [
+          {
+            "node": " OpenRouter - SEO Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    " Serper ": {
+      "main": [
+        [
+          {
+            "node": "Build SEO Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build SEO Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Stage 2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build PDF HTML": {
+      "main": [
+        [
+          {
+            "node": "PDFShift",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PDFShift": {
+      "main": [
+        [
+          {
+            "node": "Persist Stage 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "99d0bac7-0b53-417f-8ffa-f355adcaf121",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44a5bea69ab5e722c55e251b34f2c6f0196393cad9792db1001438c847f7eb53"
+  },
+  "id": "1uZqcU9UimglJAFg",
+  "tags": []
+}

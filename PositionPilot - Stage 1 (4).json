@@ -1,0 +1,528 @@
+{
+  "name": "PositionPilot - Stage 1",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "generation_run_id",
+              "value": "={{ $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "company_name",
+              "value": "=={{ $json.body.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "product_description",
+              "value": "=={{ $json.body.product_description }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "target_audience_rough",
+              "value": "={{ $json.body.target_audience || $json.body.target_audience_rough || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "primary_competitors",
+              "value": "={{ $json.body.primary_competitors || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "core_customer_problem",
+              "value": "={{ $json.body.core_customer_problem || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "desired_outcome",
+              "value": "={{ $json.body.desired_outcome || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "business_model",
+              "value": "={{ $json.body.business_model || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "2a22e727-b8b8-4009-ad48-46e1f2714418",
+              "name": "marketing_stage",
+              "value": "=={{ $json.body.marketing_stage || \"Brand Awareness (Top of Funnel)\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Business Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        80
+      ],
+      "id": "c16cd4d9-c588-484d-bf3e-f77b9d24ad94"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "={{ JSON.stringify($('Build Prompts').first().json.positioning_body) }}",
+        "options": {}
+      },
+      "name": "OpenRouter - Positioning Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        -32
+      ],
+      "id": "9565302f-5ce7-4678-a699-dbff14c2a2d7",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "R2E49as9S2vrCwJ1",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Build Prompts').first().json.icp_body) }}",
+        "options": {}
+      },
+      "name": "OpenRouter - ICP Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        608,
+        192
+      ],
+      "id": "da066ac2-8d4d-4198-9e72-64df1fa5ba85",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "R2E49as9S2vrCwJ1",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  return [{ json: { _valid: false, _raw: cleaned, _error: err.message } }];\n}\nreturn [{ json: { _valid: true, generation_run_id: $('Set Business Context').first().json.generation_run_id, agent: 'positioning', positioning_output: parsed } }];"
+      },
+      "name": "Positioning JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        -32
+      ],
+      "id": "7a07842b-97e3-4c87-b51d-eacc71b03a8c",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  return [{ json: { _valid: false, _raw: cleaned, _error: err.message } }];\n}\nreturn [{ json: { _valid: true, generation_run_id: $('Set Business Context').first().json.generation_run_id, agent: 'icp', icp_output: parsed } }];"
+      },
+      "name": "ICP JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        192
+      ],
+      "id": "9ab5094f-baf6-46b9-9fde-61846f378db6",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "name": "Merge Stage 1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1072,
+        96
+      ],
+      "id": "8087edfe-c952-4c24-b59e-4af26cb92bcb"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "positionpilot-stage1",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -256,
+        96
+      ],
+      "id": "8f64af60-34c8-4a60-95cf-99104b46641d",
+      "name": "Webhook",
+      "webhookId": "08cb5fbb-94f3-4685-9919-a1b453a93452",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MJXIEO6iR9LFLGZM",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO strategy_runs (generation_run_id, agent, output, model_used, status)\nVALUES\n($1, 'positioning', $2::jsonb, 'deepseek/deepseek-v4-flash', 'pending_review'),\n($3, 'icp', $4::jsonb, 'deepseek/deepseek-v4-flash', 'pending_review')",
+        "options": {
+          "queryReplacement": "=={{ $json.generation_run_id }}\n={{ JSON.stringify($json.positioning_output) }}\n={{ $json.generation_run_id }}\n={{ JSON.stringify($json.icp_output) }}\n"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1360,
+        96
+      ],
+      "id": "f153a69b-022b-4116-82c8-70c631fedd5a",
+      "name": "Persist Stage 1",
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1216,
+        96
+      ],
+      "id": "e5916fc5-522a-4066-91ef-2ada082f6b30",
+      "name": "Respond"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst required = ['company_name', 'core_customer_problem'];\nconst missing = required.filter(f => !body[f] || String(body[f]).trim() === '');\n\nif (missing.length > 0) {\n  return [{ json: { _valid: false, _error: 'Missing required fields: ' + missing.join(', ') } }];\n}\nreturn [{ json: { ...$input.first().json, _valid: true } }];"
+      },
+      "id": "validate-input-node-001",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._error || 'Invalid request' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "error-response-node-001",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        48,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-valid",
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid-node-001",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        48,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error?.message || 'Workflow execution failed. Please try again.' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "pp1-catch",
+      "name": "Catch Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Set Business Context').first().json;\nconst marketingStage = d.marketing_stage || 'Brand Awareness (Top of Funnel)';\n\nconst positioningBody = {\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2,\n  top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together', 'AtlasCloud', 'Venice'], allow_fallbacks: true },\n  messages: [\n    {\n      role: 'system',\n      content: 'You are an elite B2B product positioning strategist. Output ONLY valid JSON. SCHEMA: {\"category_definition\":\"string under 12 words\",\"positioning_statement\":\"For [target customer] who [specific problem], [company] is the [category] that [unique benefit], unlike [main alternative] which [key weakness]\",\"differentiation_pillars\":[\"exactly 3 strings each stating a distinct competitive strength of the company, framed as what the company does uniquely well — not what competitors do poorly. Each pillar must start with the company name or a capability it owns.\"],\"market_framing_strategy\":\"one sentence under 25 words usable verbatim in a sales email\"}'\n    },\n    {\n      role: 'user',\n      content: 'Generate positioning for this company only. Company: ' + d.company_name + ' Product: ' + d.product_description + ' Target audience: ' + d.target_audience + ' Competitors: ' + d.primary_competitors + ' Customer problem: ' + d.core_customer_problem + ' Desired outcome: ' + d.desired_outcome + ' Business model: ' + d.business_model + ' Unique differentiators: ' + d.unique_differentiators + ' Marketing stage: ' + marketingStage + ' Return JSON with category_definition, positioning_statement, differentiation_pillars, market_framing_strategy.'\n    }\n  ]\n};\n\nconst icpBody = {\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2,\n  top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together', 'AtlasCloud', 'Venice'], allow_fallbacks: true },\n  messages: [\n    {\n      role: 'system',\n      content: 'You are an elite B2B customer intelligence analyst. Output ONLY valid JSON. SCHEMA: {\"primary_target_persona\":\"string including specific age range (e.g. 28-45), job title, company size, and seniority level\",\"adoption_pattern\":\"string explaining top-down or bottom-up and why\",\"buying_triggers\":[\"exactly 5 specific observable events that move someone from passive to actively shopping\"],\"customer_fears_and_risks\":[\"exactly 3 product-specific fears\"],\"economic_buyer_profile\":\"string with exact title, company size range, annual budget authority in dollars\"}. IMPORTANT: Do not default to enterprise buyers. Match the ICP to the actual business model and target audience provided. If the product targets prosumers, SMBs, or individual professionals, reflect that accurately. Always include a specific age range in the primary_target_persona. Do NOT use generic placeholder titles like IT Project Manager, Business Analyst, or Operations Manager unless the product description explicitly names those roles as the target user.'\n    },\n    {\n      role: 'user',\n      content: 'Generate ICP for this company only. Company: ' + d.company_name + ' Product: ' + d.product_description + ' Target audience: ' + d.target_audience + ' Competitors: ' + d.primary_competitors + ' Customer problem: ' + d.core_customer_problem + ' Business model: ' + d.business_model + ' Unique differentiators: ' + d.unique_differentiators + ' Marketing stage: ' + marketingStage + ' IMPORTANT: The ICP must reflect ALL segments of the target audience provided, not just enterprise buyers. Include a specific age range (e.g. 28-45) in the persona. Include exact budget figures in the economic buyer profile. Return JSON with primary_target_persona, adoption_pattern, buying_triggers array of exactly 5, customer_fears_and_risks array of exactly 3, economic_buyer_profile.'\n    }\n  ]\n};\n\nreturn [{\n  json: {\n    generation_run_id: d.generation_run_id,\n    company_name: d.company_name,\n    marketing_stage: marketingStage,\n    positioning_body: positioningBody,\n    icp_body: icpBody\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        80
+      ],
+      "id": "6d7e2bfe-2da9-4cf6-92d8-d78a0f7ae22d",
+      "name": "Build Prompts"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Set Business Context": {
+      "main": [
+        [
+          {
+            "node": "Build Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter - Positioning Agent": {
+      "main": [
+        [
+          {
+            "node": "Positioning JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter - ICP Agent": {
+      "main": [
+        [
+          {
+            "node": "ICP JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Positioning JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ICP JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 1",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Stage 1": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond": {
+      "main": [
+        [
+          {
+            "node": "Persist Stage 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Stage 1": {
+      "main": [
+        []
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Set Business Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompts": {
+      "main": [
+        [
+          {
+            "node": "OpenRouter - Positioning Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "OpenRouter - ICP Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6571232f-8f0e-4661-956f-095b5ff61647",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44a5bea69ab5e722c55e251b34f2c6f0196393cad9792db1001438c847f7eb53"
+  },
+  "id": "RhCtbXuhe0UzEZMX",
+  "tags": []
+}

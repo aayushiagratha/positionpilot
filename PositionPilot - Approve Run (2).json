@@ -1,0 +1,198 @@
+{
+  "name": "PositionPilot - Approve Run",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "approve-run",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "wh-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "2c6a6085-4bd5-4aca-8c82-1853ff23f2c8",
+      "typeVersion": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MJXIEO6iR9LFLGZM",
+          "name": "x-api-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE strategy_runs SET status = 'approved' WHERE generation_run_id = $1 AND status = 'pending_review' RETURNING generation_run_id, agent, status",
+        "options": {
+          "queryReplacement": "={{ $json.body.generation_run_id }}"
+        }
+      },
+      "id": "pg-1",
+      "name": "Approve Run",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        672,
+        0
+      ],
+      "typeVersion": 2.6,
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nif (!body.generation_run_id || String(body.generation_run_id).trim() === '') {\n  return [{ json: { _valid: false, _error: 'Missing required field: generation_run_id' } }];\n}\nreturn [{ json: { ...$input.first().json, _valid: true } }];"
+      },
+      "id": "approve-validate-001",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        224,
+        0
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 1
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-valid",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "approve-if-001",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        448,
+        0
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._error }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "approve-err-resp-001",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        448,
+        160
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'approved', generation_run_id: $('Webhook').first().json.body.generation_run_id, message: 'Run approved successfully. You can now call Stage 2.' }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "approve-success-resp-001",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        896,
+        0
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Approve Run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve Run": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "659e4219-8e76-4fd4-8f04-2d61aa124b45",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "44a5bea69ab5e722c55e251b34f2c6f0196393cad9792db1001438c847f7eb53"
+  },
+  "id": "1UsyrGFuUbCKTpGo",
+  "tags": []
+}
