@@ -2,7 +2,7 @@
 
 AI-native GTM and positioning engine that automates ICP creation, messaging frameworks, and GTM strategy generation using specialized multi-agent workflows.
 
-Frontend: [positionpilot-32dab52e](https://github.com/aayushiagratha/positionpilot-32dab52e) (private) — live at [positionpilot-ai.vercel.app](https://positionpilot-ai.vercel.app). This repo holds the n8n workflows, schema, and infra the frontend calls into.
+Frontend: [positionpilot-32dab52e](https://github.com/aayushiagratha/positionpilot-32dab52e) — live at [positionpilot-ai.vercel.app](https://positionpilot-ai.vercel.app). This repo holds the n8n workflows, schema, and infra the frontend calls into.
 
 ## What it does
 
