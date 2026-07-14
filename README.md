@@ -2,7 +2,9 @@
 
 AI-native GTM and positioning engine that automates ICP creation, messaging frameworks, and GTM strategy generation using specialized multi-agent workflows.
 
-Frontend: [positionpilot-32dab52e](https://github.com/aayushiagratha/positionpilot-32dab52e) — live at [positionpilot-ai.vercel.app](https://positionpilot-ai.vercel.app). This repo holds the n8n workflows, schema, and infra the frontend calls into.
+Frontend: [positionpilot-frontend](https://github.com/aayushiagratha/positionpilot-frontend) — live at [positionpilot-ai.vercel.app](https://positionpilot-ai.vercel.app). This repo holds the n8n workflows, schema, and infra the frontend calls into.
+
+> **Scope of this repo:** the 5 user-facing agents of a 14-agent system. The research and governance layer (9 further agents) is not open-sourced.
 
 ## What it does
 
@@ -29,7 +31,7 @@ Two-stage pipeline with a human-in-the-loop approval gate:
 - **Infrastructure**: Docker
 - **AI Models**: DeepSeek V4 Flash via OpenRouter
 - **SEO Data**: Serper.dev (real Google SERP data)
-- **Frontend**: TanStack Start (React), scaffolded via Lovable, deployed on Vercel — see [positionpilot-32dab52e](https://github.com/aayushiagratha/positionpilot-32dab52e)
+- **Frontend**: TanStack Start (React), scaffolded via Lovable, deployed on Vercel — see [positionpilot-frontend](https://github.com/aayushiagratha/positionpilot-frontend)
 
 ## Workflows
 
