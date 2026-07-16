@@ -9,7 +9,9 @@ CREATE TABLE IF NOT EXISTS strategy_runs (
     output JSONB,
     model_used TEXT,
     status TEXT DEFAULT 'pending_review',
-    created_at TIMESTAMP DEFAULT NOW()
+    reviewed_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    marketing_stage TEXT DEFAULT 'Brand Awareness (Top of Funnel)'
 );
 
 CREATE INDEX IF NOT EXISTS idx_strategy_runs_generation_run_id ON strategy_runs(generation_run_id);
@@ -24,7 +26,7 @@ CREATE TABLE IF NOT EXISTS research_runs (
     output JSONB,
     model_used TEXT,
     status TEXT DEFAULT 'pending_review',
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_research_runs_generation_run_id ON research_runs(generation_run_id);
@@ -34,11 +36,13 @@ CREATE INDEX IF NOT EXISTS idx_research_runs_status ON research_runs(status);
 CREATE TABLE IF NOT EXISTS competitor_runs (
     id SERIAL PRIMARY KEY,
     generation_run_id TEXT NOT NULL,
+    competitor_name TEXT,
     agent TEXT NOT NULL,
     output JSONB,
     model_used TEXT,
+    run_type TEXT DEFAULT 'deep_dive',
     status TEXT DEFAULT 'pending_review',
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_competitor_runs_generation_run_id ON competitor_runs(generation_run_id);
@@ -51,8 +55,9 @@ CREATE TABLE IF NOT EXISTS brand_voice_runs (
     agent TEXT NOT NULL,
     output JSONB,
     model_used TEXT,
-    status TEXT DEFAULT 'pending_review',
-    created_at TIMESTAMP DEFAULT NOW()
+    content_type TEXT DEFAULT 'general',
+    status TEXT DEFAULT 'completed',
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_brand_voice_runs_generation_run_id ON brand_voice_runs(generation_run_id);
