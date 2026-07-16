@@ -104,10 +104,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer YOUR_OPENROUTER_API_KEY"
-            },
-            {
               "name": "HTTP-Referer",
               "value": "http://localhost:5678"
             },
@@ -116,11 +112,19 @@
               "value": "PositionPilot BrandGuard"
             }
           ]
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "retryOnFail": true,
       "typeVersion": 4.2,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YR8YWsVrwBCVTj5P",
+          "name": "OpenRouter Auth"
+        }
+      }
     },
     {
       "id": "bv-ra",
@@ -141,10 +145,6 @@
         "headerParameters": {
           "parameters": [
             {
-              "name": "Authorization",
-              "value": "Bearer YOUR_OPENROUTER_API_KEY"
-            },
-            {
               "name": "HTTP-Referer",
               "value": "http://localhost:5678"
             },
@@ -153,11 +153,19 @@
               "value": "PositionPilot BrandGuard"
             }
           ]
-        }
+        },
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
       },
       "retryOnFail": true,
       "typeVersion": 4.2,
-      "waitBetweenTries": 3000
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YR8YWsVrwBCVTj5P",
+          "name": "OpenRouter Auth"
+        }
+      }
     },
     {
       "id": "bv-ag",
