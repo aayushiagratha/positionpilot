@@ -4,7 +4,7 @@ AI-native GTM and positioning engine that automates ICP creation, messaging fram
 
 Frontend: [positionpilot-frontend](https://github.com/aayushiagratha/positionpilot-frontend) — live at [positionpilot-ai.vercel.app](https://positionpilot-ai.vercel.app). This repo holds the n8n workflows, schema, and infra the frontend calls into.
 
-> **Scope of this repo:** the 5 user-facing agents of a 14-agent system. The research and governance layer (9 further agents) is not open-sourced.
+> **Scope of this repo:** all 15 agents across 4 pipelines. The 5 user-facing agents (PositionPilot) are the product; the other 10 — competitive narrative, customer research, and brand voice — are built and published here, but have no frontend calling them yet. See `WORKFLOWS_360.md` for a walkthrough of the three non-PositionPilot layers.
 
 ## What it does
 
@@ -35,15 +35,41 @@ Two-stage pipeline with a human-in-the-loop approval gate:
 
 ## Workflows
 
+**PositionPilot** — the user-facing product (5 agents):
+
 | File | Description |
 |------|-------------|
 | `PositionPilot - Stage 1.json` | Webhook → Positioning Agent + ICP Agent (parallel) → PostgreSQL |
 | `Position Pilot - Stage 2.json` | Webhook → Messaging Agent + GTM Agent (parallel) + Serper → SEO Agent → PostgreSQL → PDF |
 | `PositionPilot - Approve Run.json` | Approve webhook → jsonb-merges edited foundation fields into stored output, updates run status to `approved` |
 
+**Competitive Narrative Mapper** — sourced competitor teardown (4 agents), same Stage 1 → approve → Stage 2 shape:
+
+| File | Description |
+|------|-------------|
+| `Competitive Narrative Mapper - Stage 1.json` | Webhook → Narrative Agent + Positioning Agent (parallel) → `competitor_runs` |
+| `Competitive Narrative Mapper - Stage 2.json` | Webhook → Positioning Opportunity Agent + Differentiation Agent (parallel) → `competitor_runs` |
+| `Competitive Narrative Mapper - Approve Run.json` | Approve webhook → merges edits, marks approved |
+
+**CustomerResearch** — pain, triggers, and personas from raw customer data (4 agents):
+
+| File | Description |
+|------|-------------|
+| `CustomerResearch - Stage 1.json` | Webhook → Pain & Objections Agent + Triggers & Language Agent (parallel) → `research_runs` |
+| `CustomerResearch - Stage 2.json` | Webhook → Persona Synthesis Agent + Messaging Intelligence Agent (parallel) → `research_runs` |
+| `CustomerResearch - Approve Run.json` | Approve webhook → merges edits, marks approved |
+
+**Brand Voice Guardian** — single-call compliance audit + on-brand rewrite (2 agents). No approve gate:
+
+| File | Description |
+|------|-------------|
+| `Brand Voice Guardian.json` | Webhook → Compliance Audit Agent + Brand Rewrite Agent (parallel) → `brand_voice_runs` |
+
+A LangGraph port of this one lives in [langgraph-agents](https://github.com/aayushiagratha/langgraph-agents).
+
 ## Database
 
-`schema.sql` defines four tables. Only `strategy_runs` is currently wired into the workflows above — `research_runs`, `competitor_runs`, and `brand_voice_runs` are scaffolded for planned agents (customer research, competitive narrative, brand voice guardrails) that don't exist yet in any workflow file in this repo.
+`schema.sql` defines four tables, one per pipeline: `strategy_runs` (PositionPilot), `competitor_runs` (Competitive Narrative Mapper), `research_runs` (CustomerResearch), and `brand_voice_runs` (Brand Voice Guardian). All four are now wired into the workflows above.
 
 ## Setup
 
@@ -54,10 +80,10 @@ Two-stage pipeline with a human-in-the-loop approval gate:
    - **PostgreSQL** connection
    - **OpenRouter Auth** (Header Auth, header name `Authorization`, value `Bearer <your-openrouter-key>`)
    - **Serper API** (Header Auth, header name `X-API-KEY`, value `<your-serper-key>`) — used by the Stage 2 SEO agent
-   - **x-api-key** (Header Auth, header name `x-api-key`, value `<your-generated-secret>`) — required for all three webhooks (Stage 1, Stage 2, Approve Run)
-5. On each Webhook trigger node (Stage 1, Stage 2, Approve Run), set **Authentication** to **Header Auth** and select the `x-api-key` credential
-6. Activate all 3 workflows
-7. Any client calling these webhooks must send the `x-api-key` header on every request, or the call will be rejected with 403
+   - **x-api-key** (Header Auth, header name `x-api-key`, value `<your-generated-secret>`)
+5. **Set webhook authentication.** The workflow files ship with webhook auth **off**. On every Webhook trigger node, set **Authentication** to **Header Auth** and select the `x-api-key` credential. Do this before exposing n8n beyond localhost — see Security below.
+6. Activate the workflows you need (10 in total; the 3 PositionPilot ones are enough to run the product)
+7. Once step 5 is done, any client calling these webhooks must send the `x-api-key` header on every request
 
 ## Environment Variables
 
@@ -74,7 +100,9 @@ WEBHOOK_URL=your-n8n-url
 
 ## Security
 
-All three public webhooks (Stage 1, Stage 2, Approve Run) require a valid `x-api-key` header. Unauthenticated requests are rejected with a 403 before any workflow logic executes.
+**The webhook trigger nodes in these files have authentication turned off.** Every workflow here is intended to sit behind Header Auth (`x-api-key`), and step 5 of Setup covers wiring it — but the exported JSON does not carry that setting, so an import gives you open webhooks. Configure it before running n8n anywhere reachable from the internet.
+
+No credentials are committed. Every API key is referenced through an n8n credential (`OpenRouter Auth`, `Serper API`, `pdf`, the Postgres connection), so the workflow files hold references, never secrets.
 
 ## Built by
 
