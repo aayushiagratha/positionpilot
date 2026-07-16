@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-05T10:26:24.905Z",
+  "updatedAt": "2026-07-16T22:15:19.285Z",
   "createdAt": "2026-05-28T13:28:39.370Z",
   "id": "RhCtbXuhe0UzEZMX",
   "name": "PositionPilot - Stage 1",
@@ -215,7 +215,8 @@
         "httpMethod": "POST",
         "path": "positionpilot-stage1",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -225,7 +226,13 @@
       ],
       "id": "8f64af60-34c8-4a60-95cf-99104b46641d",
       "name": "Webhook",
-      "webhookId": "08cb5fbb-94f3-4685-9919-a1b453a93452"
+      "webhookId": "08cb5fbb-94f3-4685-9919-a1b453a93452",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5YIv5VI9rrKwULet",
+          "name": "Webhook Secret"
+        }
+      }
     },
     {
       "parameters": {
@@ -520,9 +527,9 @@
     "templateCredsSetupCompleted": true
   },
   "pinData": {},
-  "versionId": "bfe4cec4-6d47-4811-bba9-046623a87031",
-  "activeVersionId": "bfe4cec4-6d47-4811-bba9-046623a87031",
-  "versionCounter": 306,
+  "versionId": "7fe18beb-a726-492b-a935-b475261e6d0e",
+  "activeVersionId": "7fe18beb-a726-492b-a935-b475261e6d0e",
+  "versionCounter": 308,
   "triggerCount": 1,
   "tags": [],
   "shared": [

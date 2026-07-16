@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-31T22:14:36.560Z",
+  "updatedAt": "2026-07-16T22:15:09.468Z",
   "createdAt": "2026-05-31T22:14:36.560Z",
   "id": "4MU7WrwpgZtrBqUA",
   "name": "Competitive Narrative Mapper - Stage 1",
@@ -20,9 +20,16 @@
         "path": "competitor-stage1",
         "options": {},
         "httpMethod": "POST",
-        "responseMode": "responseNode"
+        "responseMode": "responseNode",
+        "authentication": "headerAuth"
       },
-      "typeVersion": 2
+      "typeVersion": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5YIv5VI9rrKwULet",
+          "name": "Webhook Secret"
+        }
+      }
     },
     {
       "id": "cn1-val",
@@ -446,9 +453,9 @@
   "staticData": null,
   "meta": null,
   "pinData": null,
-  "versionId": "c3b31dc8-009d-4517-8b75-16ca2e33f3be",
-  "activeVersionId": "c3b31dc8-009d-4517-8b75-16ca2e33f3be",
-  "versionCounter": 34,
+  "versionId": "9b1f72b9-b3b1-4441-9eae-59338ba11c69",
+  "activeVersionId": "9b1f72b9-b3b1-4441-9eae-59338ba11c69",
+  "versionCounter": 36,
   "triggerCount": 1,
   "tags": [],
   "shared": [

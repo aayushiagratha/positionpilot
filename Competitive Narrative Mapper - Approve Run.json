@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-31T22:14:54.075Z",
+  "updatedAt": "2026-07-16T22:15:08.142Z",
   "createdAt": "2026-05-31T22:14:54.075Z",
   "id": "rAdWyBmSjIysfLPw",
   "name": "Competitive Narrative Mapper - Approve Run",
@@ -21,9 +21,15 @@
         "options": {},
         "httpMethod": "POST",
         "responseMode": "responseNode",
-        "authentication": "none"
+        "authentication": "headerAuth"
       },
-      "typeVersion": 2
+      "typeVersion": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5YIv5VI9rrKwULet",
+          "name": "Webhook Secret"
+        }
+      }
     },
     {
       "id": "pg-1",
@@ -187,9 +193,9 @@
   "staticData": null,
   "meta": null,
   "pinData": null,
-  "versionId": "b316b0e1-0549-48f7-a9c1-29ec67bb0e8d",
-  "activeVersionId": "b316b0e1-0549-48f7-a9c1-29ec67bb0e8d",
-  "versionCounter": 34,
+  "versionId": "cae7f865-4e76-45a8-bb4a-be1208b2d3f6",
+  "activeVersionId": "cae7f865-4e76-45a8-bb4a-be1208b2d3f6",
+  "versionCounter": 36,
   "triggerCount": 1,
   "tags": [],
   "shared": [

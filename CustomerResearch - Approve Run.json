@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-31T21:58:31.564Z",
+  "updatedAt": "2026-07-16T22:15:12.256Z",
   "createdAt": "2026-05-31T21:58:31.564Z",
   "id": "sQb0TCMrvwawOQM5",
   "name": "CustomerResearch - Approve Run",
@@ -21,9 +21,15 @@
         "options": {},
         "httpMethod": "POST",
         "responseMode": "responseNode",
-        "authentication": "none"
+        "authentication": "headerAuth"
       },
-      "typeVersion": 2
+      "typeVersion": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5YIv5VI9rrKwULet",
+          "name": "Webhook Secret"
+        }
+      }
     },
     {
       "id": "pg-1",
@@ -187,9 +193,9 @@
   "staticData": null,
   "meta": null,
   "pinData": null,
-  "versionId": "d06aad83-a381-4d28-a586-0db723390f36",
-  "activeVersionId": "d06aad83-a381-4d28-a586-0db723390f36",
-  "versionCounter": 34,
+  "versionId": "22cdf5c9-fcbc-4f67-bb12-fde4a3c51aa9",
+  "activeVersionId": "22cdf5c9-fcbc-4f67-bb12-fde4a3c51aa9",
+  "versionCounter": 36,
   "triggerCount": 1,
   "tags": [],
   "shared": [

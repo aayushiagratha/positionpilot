@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-05T16:05:00.954Z",
+  "updatedAt": "2026-07-16T22:15:17.935Z",
   "createdAt": "2026-05-31T16:09:29.161Z",
   "id": "1UsyrGFuUbCKTpGo",
   "name": "PositionPilot - Approve Run",
@@ -12,7 +12,8 @@
         "httpMethod": "POST",
         "path": "approve-run",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "id": "wh-1",
       "name": "Webhook",
@@ -22,7 +23,13 @@
         0
       ],
       "webhookId": "2c6a6085-4bd5-4aca-8c82-1853ff23f2c8",
-      "typeVersion": 2
+      "typeVersion": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5YIv5VI9rrKwULet",
+          "name": "Webhook Secret"
+        }
+      }
     },
     {
       "parameters": {
@@ -190,9 +197,9 @@
     "templateCredsSetupCompleted": true
   },
   "pinData": {},
-  "versionId": "2afdfded-9e4d-4729-966b-f9039cad07a4",
-  "activeVersionId": "2afdfded-9e4d-4729-966b-f9039cad07a4",
-  "versionCounter": 66,
+  "versionId": "e2f77f60-5397-4aa2-a306-835761bb57f2",
+  "activeVersionId": "e2f77f60-5397-4aa2-a306-835761bb57f2",
+  "versionCounter": 68,
   "triggerCount": 1,
   "tags": [],
   "shared": [

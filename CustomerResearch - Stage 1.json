@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-31T22:03:49.369Z",
+  "updatedAt": "2026-07-16T22:15:13.735Z",
   "createdAt": "2026-05-31T21:34:49.769Z",
   "id": "KTD1woBkrHaWuNfy",
   "name": "CustomerResearch - Stage 1",
@@ -20,9 +20,16 @@
         "path": "research-stage1",
         "options": {},
         "httpMethod": "POST",
-        "responseMode": "responseNode"
+        "responseMode": "responseNode",
+        "authentication": "headerAuth"
       },
-      "typeVersion": 2
+      "typeVersion": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5YIv5VI9rrKwULet",
+          "name": "Webhook Secret"
+        }
+      }
     },
     {
       "id": "rs1-val",
@@ -423,9 +430,9 @@
   "staticData": null,
   "meta": null,
   "pinData": null,
-  "versionId": "938387d4-fc55-4f03-9c26-f1a50fc7bd16",
-  "activeVersionId": "938387d4-fc55-4f03-9c26-f1a50fc7bd16",
-  "versionCounter": 55,
+  "versionId": "94c79455-f83e-4ec1-a200-11e84951aae6",
+  "activeVersionId": "94c79455-f83e-4ec1-a200-11e84951aae6",
+  "versionCounter": 57,
   "triggerCount": 1,
   "tags": [],
   "shared": [

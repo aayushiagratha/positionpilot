@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-05-31T22:24:50.879Z",
+  "updatedAt": "2026-07-16T22:15:06.725Z",
   "createdAt": "2026-05-31T22:24:50.879Z",
   "id": "eTCzQb1cnY7W4Chl",
   "name": "Brand Voice Guardian",
@@ -20,9 +20,16 @@
         "path": "brand-voice-check",
         "options": {},
         "httpMethod": "POST",
-        "responseMode": "responseNode"
+        "responseMode": "responseNode",
+        "authentication": "headerAuth"
       },
-      "typeVersion": 2
+      "typeVersion": 2,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5YIv5VI9rrKwULet",
+          "name": "Webhook Secret"
+        }
+      }
     },
     {
       "id": "bv-val",
@@ -422,9 +429,9 @@
   "staticData": null,
   "meta": null,
   "pinData": null,
-  "versionId": "6aa6184a-0e2d-4553-8055-f0124a14a1b2",
-  "activeVersionId": "6aa6184a-0e2d-4553-8055-f0124a14a1b2",
-  "versionCounter": 34,
+  "versionId": "816cc108-286b-4204-9dd9-b4a53f29c43a",
+  "activeVersionId": "816cc108-286b-4204-9dd9-b4a53f29c43a",
+  "versionCounter": 36,
   "triggerCount": 1,
   "tags": [],
   "shared": [

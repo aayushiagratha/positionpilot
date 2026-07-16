@@ -80,10 +80,9 @@ A LangGraph port of this one lives in [langgraph-agents](https://github.com/aayu
    - **PostgreSQL** connection
    - **OpenRouter Auth** (Header Auth, header name `Authorization`, value `Bearer <your-openrouter-key>`)
    - **Serper API** (Header Auth, header name `X-API-KEY`, value `<your-serper-key>`) — used by the Stage 2 SEO agent
-   - **x-api-key** (Header Auth, header name `x-api-key`, value `<your-generated-secret>`)
-5. **Set webhook authentication.** The workflow files ship with webhook auth **off**. On every Webhook trigger node, set **Authentication** to **Header Auth** and select the `x-api-key` credential. Do this before exposing n8n beyond localhost — see Security below.
-6. Activate the workflows you need (10 in total; the 3 PositionPilot ones are enough to run the product)
-7. Once step 5 is done, any client calling these webhooks must send the `x-api-key` header on every request
+   - **Webhook Secret** (Header Auth, header name `x-api-key`, value `<your-generated-secret>`) — every webhook in every workflow authenticates against this
+5. Activate the workflows you need (10 in total; the 3 PositionPilot ones are enough to run the product)
+6. Any client calling these webhooks must send the `x-api-key` header on every request, or the call is rejected with 403
 
 ## Environment Variables
 
@@ -100,9 +99,9 @@ WEBHOOK_URL=your-n8n-url
 
 ## Security
 
-**The webhook trigger nodes in these files have authentication turned off.** Every workflow here is intended to sit behind Header Auth (`x-api-key`), and step 5 of Setup covers wiring it — but the exported JSON does not carry that setting, so an import gives you open webhooks. Configure it before running n8n anywhere reachable from the internet.
+All 10 webhooks sit behind Header Auth. Every request must carry an `x-api-key` header matching the `Webhook Secret` credential; requests without it are rejected with a 403 before any workflow logic runs. The workflow files carry this setting, so an import brings it with them — you only need to create the credential itself (Setup step 4).
 
-No credentials are committed. Every API key is referenced through an n8n credential (`OpenRouter Auth`, `Serper API`, `pdf`, the Postgres connection), so the workflow files hold references, never secrets.
+No credentials are committed. Every API key is referenced through an n8n credential (`OpenRouter Auth`, `Serper API`, `pdf`, `Webhook Secret`, the Postgres connection), so the workflow files hold references, never secrets.
 
 ## Built by
 

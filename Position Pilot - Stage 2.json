@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-05T03:08:26.247Z",
+  "updatedAt": "2026-07-16T22:15:16.531Z",
   "createdAt": "2026-05-28T16:56:23.668Z",
   "id": "1uZqcU9UimglJAFg",
   "name": "Position Pilot - Stage 2",
@@ -12,7 +12,8 @@
         "httpMethod": "POST",
         "path": "positionpilot-stage2",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {},
+        "authentication": "headerAuth"
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -22,7 +23,13 @@
       ],
       "id": "a0d771fd-5802-400d-b7f0-41ebb21f3e0b",
       "name": "Webhook",
-      "webhookId": "0f9f5f89-6bec-426b-a30a-c35d7ac10167"
+      "webhookId": "0f9f5f89-6bec-426b-a30a-c35d7ac10167",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "5YIv5VI9rrKwULet",
+          "name": "Webhook Secret"
+        }
+      }
     },
     {
       "parameters": {
@@ -729,9 +736,9 @@
       }
     ]
   },
-  "versionId": "50374596-43a9-4246-b090-0211e02bd1c1",
-  "activeVersionId": "50374596-43a9-4246-b090-0211e02bd1c1",
-  "versionCounter": 763,
+  "versionId": "ebb0ecf2-8284-4118-b89b-6bb103ed3280",
+  "activeVersionId": "ebb0ecf2-8284-4118-b89b-6bb103ed3280",
+  "versionCounter": 765,
   "triggerCount": 1,
   "tags": [],
   "shared": [
