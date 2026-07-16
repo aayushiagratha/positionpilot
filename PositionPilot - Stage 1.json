@@ -1,0 +1,551 @@
+{
+  "updatedAt": "2026-07-05T10:26:24.905Z",
+  "createdAt": "2026-05-28T13:28:39.370Z",
+  "id": "RhCtbXuhe0UzEZMX",
+  "name": "PositionPilot - Stage 1",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "generation_run_id",
+              "value": "={{ $execution.id }}",
+              "type": "string"
+            },
+            {
+              "id": "2",
+              "name": "company_name",
+              "value": "=={{ $json.body.company_name }}",
+              "type": "string"
+            },
+            {
+              "id": "3",
+              "name": "product_description",
+              "value": "=={{ $json.body.product_description }}",
+              "type": "string"
+            },
+            {
+              "id": "4",
+              "name": "target_audience_rough",
+              "value": "={{ $json.body.target_audience || $json.body.target_audience_rough || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5",
+              "name": "primary_competitors",
+              "value": "={{ $json.body.primary_competitors || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "6",
+              "name": "core_customer_problem",
+              "value": "={{ $json.body.core_customer_problem || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "7",
+              "name": "desired_outcome",
+              "value": "={{ $json.body.desired_outcome || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "8",
+              "name": "business_model",
+              "value": "={{ $json.body.business_model || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "2a22e727-b8b8-4009-ad48-46e1f2714418",
+              "name": "marketing_stage",
+              "value": "=={{ $json.body.marketing_stage || \"Brand Awareness (Top of Funnel)\" }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Set Business Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        112
+      ],
+      "id": "c16cd4d9-c588-484d-bf3e-f77b9d24ad94"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "={{ JSON.stringify($('Build Prompts').first().json.positioning_body) }}",
+        "options": {}
+      },
+      "name": "OpenRouter - Positioning Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        864,
+        -32
+      ],
+      "id": "9565302f-5ce7-4678-a699-dbff14c2a2d7",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YR8YWsVrwBCVTj5P",
+          "name": "OpenRouter Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($('Build Prompts').first().json.icp_body) }}",
+        "options": {}
+      },
+      "name": "OpenRouter - ICP Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        864,
+        256
+      ],
+      "id": "da066ac2-8d4d-4198-9e72-64df1fa5ba85",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "YR8YWsVrwBCVTj5P",
+          "name": "OpenRouter Auth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  return [{ json: { _valid: false, _raw: cleaned, _error: err.message } }];\n}\nreturn [{ json: { _valid: true, generation_run_id: $('Set Business Context').first().json.generation_run_id, agent: 'positioning', positioning_output: parsed } }];"
+      },
+      "name": "Positioning JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        -32
+      ],
+      "id": "7a07842b-97e3-4c87-b51d-eacc71b03a8c",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (err) {\n  return [{ json: { _valid: false, _raw: cleaned, _error: err.message } }];\n}\nreturn [{ json: { _valid: true, generation_run_id: $('Set Business Context').first().json.generation_run_id, agent: 'icp', icp_output: parsed } }];"
+      },
+      "name": "ICP JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        256
+      ],
+      "id": "9ab5094f-baf6-46b9-9fde-61846f378db6",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "name": "Merge Stage 1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1312,
+        16
+      ],
+      "id": "8087edfe-c952-4c24-b59e-4af26cb92bcb"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "positionpilot-stage1",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -256,
+        208
+      ],
+      "id": "8f64af60-34c8-4a60-95cf-99104b46641d",
+      "name": "Webhook",
+      "webhookId": "08cb5fbb-94f3-4685-9919-a1b453a93452"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO strategy_runs (generation_run_id, agent, output, model_used, status)\nVALUES\n($1, 'positioning', $2::jsonb, 'deepseek/deepseek-v4-flash', 'pending_review'),\n($3, 'icp', $4::jsonb, 'deepseek/deepseek-v4-flash', 'pending_review')",
+        "options": {
+          "queryReplacement": "=={{ $json.generation_run_id }}\n={{ JSON.stringify($json.positioning_output) }}\n={{ $json.generation_run_id }}\n={{ JSON.stringify($json.icp_output) }}\n"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1760,
+        16
+      ],
+      "id": "f153a69b-022b-4116-82c8-70c631fedd5a",
+      "name": "Persist Stage 1",
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1536,
+        16
+      ],
+      "id": "e5916fc5-522a-4066-91ef-2ada082f6b30",
+      "name": "Respond"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst required = ['company_name', 'core_customer_problem'];\nconst missing = required.filter(f => !body[f] || String(body[f]).trim() === '');\n\nif (missing.length > 0) {\n  return [{ json: { _valid: false, _error: 'Missing required fields: ' + missing.join(', ') } }];\n}\nreturn [{ json: { ...$input.first().json, _valid: true } }];"
+      },
+      "id": "validate-input-node-001",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._error || 'Invalid request' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "error-response-node-001",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        416,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-valid",
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid-node-001",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        192,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error?.message || 'Workflow execution failed. Please try again.' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "pp1-catch",
+      "name": "Catch Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1312,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $('Set Business Context').first().json;\nconst marketingStage = d.marketing_stage || 'Brand Awareness (Top of Funnel)';\n\nconst positioningBody = {\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2,\n  top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together', 'AtlasCloud', 'Venice'], allow_fallbacks: true },\n  messages: [\n    {\n      role: 'system',\n      content: 'You are an elite B2B product positioning strategist. Your job is to define the ROLE this product plays in a customer life, not to restate its features, and to deliberately choose which category the company should own rather than defaulting to the obvious one implied by the product description. Before writing the JSON, silently reason through: (0) generate 4 distinct candidate categories this company could credibly own, including at least one that reframes the market rather than describing the literal product type, (1) what does the product literally do, (2) which of those capabilities actually matters to the customer, (3) what does life look like before versus after using it, (4) for each candidate category apply this durability test: would this category definition still make sense if the product doubled its feature set two years from now. Reject any candidate that only works for the current feature set. Select the candidate that passes the durability test and best matches the customer transformation, and use it as category_definition. Never let a feature or mechanism become the subject of a differentiation_pillars sentence or the positioning_statement unique benefit clause; pillars must describe an outcome or transformation the company uniquely delivers, never a capability. Test each pillar: if the sentence could appear unchanged on a features or product page, it fails and must be rewritten as an outcome. BAD pillar: Auto-applies to jobs on your behalf. GOOD pillar: Gives you your evenings back by taking the job search off your plate. (5) using the category_definition selected in step 4, generate 5 candidate pillars that specifically reinforce that category rather than reading as generic claims about the product, each an outcome or transformation, then for each one explicitly name-check it against every named competitor provided: would that named competitor, in their own marketing, plausibly say almost this exact sentence about themselves. Write down the verdict for each candidate. Any candidate a named competitor could plausibly claim is table stakes, not differentiation, and must be marked rejected even if it sounds good. From the candidates that survive, select and order the final 3 from hardest-for-a-named-competitor-to-copy to easiest. If fewer than 3 candidates survive, generate more candidates until 3 survive rather than reusing a rejected one. (6) using the category_definition from step 4 and the differentiation_pillars that survive step 5, compress those specific choices into one sentence under 8 words that a customer could repeat word for word to a friend after hearing the pitch a single time, with zero additional explanation needed for it to land; draft 3 candidates for this and keep only the one that needs no follow-up sentence to make sense. Reject any candidate that is generic enough to apply to a different company in the same market. (7) using the category_definition from step 4 and the differentiation_pillars from step 5 as the concrete evidence, articulate the underlying belief this brand should hold about how the category should work, using these as calibration references, not as content to copy: Linear believes software should feel like magic, Superhuman believes time is your most valuable asset, Stripe believes the goal is to increase the GDP of the internet, Notion believes software should be as flexible as paper. Write one original belief in that register for this specific company, grounded in its actual customer problem, not a generic restatement of the product description. (8) using the differentiation_pillars from step 5 as the concrete evidence for which side this brand is already on, name the central strategic tension this brand should explicitly choose a side on, using these as calibration references: Notion chose simple over enterprise-complex, Superhuman chose speed over feature completeness, Figma chose browser-based over desktop-native. The tension must be a real trade-off where a reasonable competitor could credibly choose the opposite side; do not describe both sides neutrally, commit to one. Output ONLY valid JSON. SCHEMA: {\"category_candidates\":[\"exactly 4 strings, each formatted as CategoryName - one-line reason it was considered or rejected, stating whether it passed the durability test\"],\"category_definition\":\"string under 12 words, must be the winning candidate from category_candidates\",\"positioning_statement\":\"For [target customer] who [specific problem], [company] is the [category] that [unique benefit], unlike [main alternative] which [key weakness]\",\"before_after_transformation\":\"string formatted exactly as Before: [one concrete sentence describing the current painful day-to-day state for that customer, with specific time or effort detail, not an abstract adjective]. After: [one concrete sentence describing life once the product is adopted, equally specific]\",\"pillar_candidates\":[\"exactly 5 strings, each formatted as: the candidate pillar sentence, then a dash, then REJECTED plus the name of the competitor who could plausibly claim it, or SURVIVED plus why no named competitor could plausibly claim it\"],\"differentiation_pillars\":[\"exactly 3 strings taken only from pillar_candidates entries marked SURVIVED, ordered from hardest-to-replicate to easiest-to-replicate, each describing a customer-facing outcome or transformation the company uniquely delivers, never a feature, mechanism, or capability, and never appearing unchanged on a features or product page\"],\"market_framing_strategy\":\"one sentence under 25 words usable verbatim in a sales email, framed as an outcome not a feature\",\"memorable_hook\":\"the single winning candidate from step 6: under 8 words, no jargon, repeatable verbatim after one hearing, and specific enough that it would not fit a different company in the same market\",\"brand_philosophy\":\"one original sentence stating the belief this brand holds about how the category should work, in the register of the calibration references from step 7, grounded in this specific customer problem, never a restatement of the product description\",\"strategic_tension\":\"string formatted as [side this brand takes] over [side it explicitly rejects], naming a real trade-off in the register of the calibration references from step 8, where a reasonable competitor could credibly have chosen the opposite side\"}'\n    },\n    {\n      role: 'user',\n      content: 'Generate positioning for this company only. Company: ' + d.company_name + ' Product: ' + d.product_description + ' Target audience: ' + d.target_audience + ' Competitors: ' + d.primary_competitors + ' Customer problem: ' + d.core_customer_problem + ' Desired outcome: ' + d.desired_outcome + ' Business model: ' + d.business_model + ' Unique differentiators: ' + d.unique_differentiators + ' Marketing stage: ' + marketingStage + ' Return JSON with category_definition, positioning_statement, before_after_transformation, differentiation_pillars, market_framing_strategy, memorable_hook, brand_philosophy, strategic_tension.'\n    }\n  ]\n};\n\nconst icpBody = {\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2,\n  top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together', 'AtlasCloud', 'Venice'], allow_fallbacks: true },\n  messages: [\n    {\n      role: 'system',\n      content: 'You are an elite B2B customer intelligence analyst. Demographic traits like age, job title, company size, and industry are weak predictors of who actually buys; behavior is what predicts purchase. Lead with what the person already does, how urgently they need the outcome, and what they have already tried, before any demographic detail. Output ONLY valid JSON. SCHEMA: {\"behavioral_signals\":[\"exactly 5 specific observable behaviors or habits that indicate someone is in-market right now, phrased as things the person already does, for example already customizes materials by hand, does the core task weekly, has been actively working the problem for 60 plus days, prioritizes quality over volume, is already paying for or trialing an adjacent tool\"],\"primary_target_persona\":\"string led by the behavioral profile from behavioral_signals; job function and career stage may follow as light context; only mention age range or company size if it is genuinely load-bearing for this product, and if mentioned it must come after the behavioral description, never first\",\"adoption_pattern\":\"string explaining top-down or bottom-up and why\",\"buying_triggers\":[\"exactly 5 triggers that move someone from passive to actively shopping; at least 2 must be emotional or psychological states the person would say about themselves, such as feeling exhausted, feeling stuck, losing confidence, or comparing themselves to peers who are succeeding, phrased in first person or as a felt state rather than a circumstance; the rest may be functional or circumstantial events; do not make all 5 purely circumstantial\"],\"customer_fears_and_risks\":[\"exactly 3 product-specific fears\"],\"economic_buyer_profile\":\"string with exact title, company size range, annual budget authority in dollars\"}. IMPORTANT: Do not default to enterprise buyers. Match the ICP to the actual business model and target audience provided. If the product targets prosumers, SMBs, or individual professionals, reflect that accurately. Do NOT use generic placeholder titles like IT Project Manager, Business Analyst, or Operations Manager unless the product description explicitly names those roles as the target user.'\n    },\n    {\n      role: 'user',\n      content: 'Generate ICP for this company only. Company: ' + d.company_name + ' Product: ' + d.product_description + ' Target audience: ' + d.target_audience + ' Competitors: ' + d.primary_competitors + ' Customer problem: ' + d.core_customer_problem + ' Business model: ' + d.business_model + ' Unique differentiators: ' + d.unique_differentiators + ' Marketing stage: ' + marketingStage + ' IMPORTANT: The ICP must reflect ALL segments of the target audience provided, not just enterprise buyers. Lead with behavioral_signals before any demographic detail. Include exact budget figures in the economic buyer profile. Return JSON with behavioral_signals array of exactly 5, primary_target_persona, adoption_pattern, buying_triggers array of exactly 5, customer_fears_and_risks array of exactly 3, economic_buyer_profile.'\n    }\n  ]\n};\n\nreturn [{\n  json: {\n    generation_run_id: d.generation_run_id,\n    company_name: d.company_name,\n    marketing_stage: marketingStage,\n    positioning_body: positioningBody,\n    icp_body: icpBody\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        112
+      ],
+      "id": "6d7e2bfe-2da9-4cf6-92d8-d78a0f7ae22d",
+      "name": "Build Prompts"
+    }
+  ],
+  "connections": {
+    "Set Business Context": {
+      "main": [
+        [
+          {
+            "node": "Build Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter - Positioning Agent": {
+      "main": [
+        [
+          {
+            "node": "Positioning JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter - ICP Agent": {
+      "main": [
+        [
+          {
+            "node": "ICP JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Positioning JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ICP JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 1",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Stage 1": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond": {
+      "main": [
+        [
+          {
+            "node": "Persist Stage 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Stage 1": {
+      "main": [
+        []
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Set Business Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompts": {
+      "main": [
+        [
+          {
+            "node": "OpenRouter - Positioning Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "OpenRouter - ICP Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "pinData": {},
+  "versionId": "bfe4cec4-6d47-4811-bba9-046623a87031",
+  "activeVersionId": "bfe4cec4-6d47-4811-bba9-046623a87031",
+  "versionCounter": 306,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-28T13:28:39.370Z",
+      "createdAt": "2026-05-28T13:28:39.370Z",
+      "role": "workflow:owner",
+      "workflowId": "RhCtbXuhe0UzEZMX",
+      "projectId": "3dfwvZhfhnaVNfU5",
+      "project": {
+        "updatedAt": "2026-05-28T13:07:34.069Z",
+        "createdAt": "2026-05-28T13:06:00.222Z",
+        "id": "3dfwvZhfhnaVNfU5",
+        "name": "aayushi agratha <aayushi.agratha@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "37d449a5-d278-4811-8f61-87e0e003b917"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version bfe4cec4",
+    "description": "Positioning agent: reasoning steps 5-8 now explicitly reference the concrete output of prior steps (category_definition from step 4, differentiation_pillars from step 5) instead of implicit ordering, so pillars/hook/philosophy/tension are derived from the actual chosen category rather than reasoned independently. No new nodes or added latency. Syntax-checked before publishing."
+  }
+}

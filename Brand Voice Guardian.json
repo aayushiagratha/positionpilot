@@ -1,0 +1,445 @@
+{
+  "updatedAt": "2026-05-31T22:24:50.879Z",
+  "createdAt": "2026-05-31T22:24:50.879Z",
+  "id": "eTCzQb1cnY7W4Chl",
+  "name": "Brand Voice Guardian",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "bv-wh",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -1000,
+        0
+      ],
+      "webhookId": "173f7805-d8c5-4111-a6e8-2c6b740ae5dd",
+      "parameters": {
+        "path": "brand-voice-check",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "bv-val",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -800,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst missing = ['brand_voice_guidelines','content_to_review'].filter(f => !body[f] || String(body[f]).trim() === '');\nif (missing.length > 0) return [{ json: { _valid: false, _error: 'Missing required fields: ' + missing.join(', ') } }];\nreturn [{ json: { ...body, _valid: true } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "bv-iv",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -600,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "bv-er",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        -600,
+        220
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 400
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._error || 'Invalid request' }) }}"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "bv-aa",
+      "name": "Compliance Audit Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        -400,
+        -200
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek/deepseek-v4-flash', temperature: 0.1, top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together','AtlasCloud','Venice'], allow_fallbacks: true },\n  messages: [\n    { role: 'system', content: \"You are a brand voice compliance auditor. Your job is to analyze content against brand voice guidelines and produce a detailed compliance report.\\n\\nReturn ONLY valid JSON with this EXACT structure — no other text:\\n{\\n  \\\"compliance_score\\\": 78,\\n  \\\"grade\\\": \\\"B\\\",\\n  \\\"summary\\\": \\\"1-2 sentence executive summary of brand voice compliance\\\",\\n  \\\"violations\\\": [\\n    {\\n      \\\"violation_id\\\": \\\"V1\\\",\\n      \\\"severity\\\": \\\"critical|major|minor\\\",\\n      \\\"original_text\\\": \\\"the exact offending phrase or sentence from the content\\\",\\n      \\\"issue\\\": \\\"what brand rule this violates\\\",\\n      \\\"guideline_reference\\\": \\\"which specific guideline was broken\\\",\\n      \\\"confidence_score\\\": 0.92\\n    }\\n  ],\\n  \\\"strengths\\\": [\\\"what the content does well against the brand voice\\\"],\\n  \\\"tone_analysis\\\": {\\n    \\\"detected_tones\\\": [\\\"professional\\\", \\\"technical\\\"],\\n    \\\"required_tones\\\": [\\\"conversational\\\", \\\"empathetic\\\"],\\n    \\\"alignment_score\\\": 0.65\\n  },\\n  \\\"word_pattern_flags\\\": [\\\"jargon terms used\\\", \\\"filler phrases\\\", \\\"off-brand words\\\"]\\n}\" },\n    { role: 'user', content: 'BRAND VOICE GUIDELINES:\\n' + $json.brand_voice_guidelines + '\\n\\nCONTENT TYPE: ' + ($json.content_type || 'general') + '\\n\\nCONTENT TO AUDIT:\\n' + $json.content_to_review + '\\n\\nAudit this content for brand voice compliance. Be specific about violations. Return only the JSON object.' }\n  ]\n}) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot BrandGuard"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "bv-ra",
+      "name": "Brand Rewrite Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        -400,
+        200
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek/deepseek-v4-flash', temperature: 0.3, top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together','AtlasCloud','Venice'], allow_fallbacks: true },\n  messages: [\n    { role: 'system', content: \"You are a brand voice copywriter. You receive content with compliance violations and rewrite it to be fully on-brand.\\n\\nReturn ONLY valid JSON with this EXACT structure — no other text:\\n{\\n  \\\"rewritten_content\\\": \\\"the full rewritten content, on-brand throughout\\\",\\n  \\\"changes_made\\\": [\\n    {\\n      \\\"violation_id\\\": \\\"V1\\\",\\n      \\\"original\\\": \\\"exact original phrase\\\",\\n      \\\"rewritten\\\": \\\"on-brand replacement\\\",\\n      \\\"rationale\\\": \\\"why this change aligns with brand voice\\\"\\n    }\\n  ],\\n  \\\"rewrite_confidence\\\": 0.88,\\n  \\\"notes\\\": \\\"any caveats or suggestions for the human reviewer\\\"\\n}\" },\n    { role: 'user', content: 'BRAND VOICE GUIDELINES:\\n' + $json.brand_voice_guidelines + '\\n\\nCONTENT TYPE: ' + ($json.content_type || 'general') + '\\n\\nORIGINAL CONTENT TO REWRITE:\\n' + $json.content_to_review + '\\n\\nRewrite this content to be fully on-brand. Return only the JSON object.' }\n  ]\n}) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot BrandGuard"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "bv-ag",
+      "name": "Audit JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        -200,
+        -200
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\nif (typeof parsed.compliance_score !== 'number') throw new Error('Audit Agent: invalid schema — missing compliance_score');\nreturn [{ json: { audit_output: parsed } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "bv-rg",
+      "name": "Rewrite JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        -200,
+        200
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\nif (!parsed.rewritten_content) throw new Error('Rewrite Agent: invalid schema — missing rewritten_content');\nreturn [{ json: { rewrite_output: parsed } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "bv-mg",
+      "name": "Merge Results",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "mode": "combine",
+        "options": {},
+        "combineBy": "combineByPosition"
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "bv-rs",
+      "name": "Reshape Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const merged = $input.first().json;\nreturn [{ json: {\n  generation_run_id: $execution.id,\n  company_name: $('Validate Input').first().json.company_name || 'unknown',\n  content_type: $('Validate Input').first().json.content_type || 'general',\n  audit_output: merged.audit_output || null,\n  rewrite_output: merged.rewrite_output || null\n} }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "bv-ps",
+      "name": "Persist Results",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "query": "INSERT INTO brand_voice_runs (generation_run_id, agent, output, model_used, content_type, status)\nVALUES ($1, 'audit', $2::jsonb, 'deepseek/deepseek-v4-flash', $3, 'completed'),\n       ($4, 'rewrite', $5::jsonb, 'deepseek/deepseek-v4-flash', $6, 'completed')",
+        "options": {
+          "queryReplacement": "={{ $json.generation_run_id }}\n={{ JSON.stringify($json.audit_output) }}\n={{ $json.content_type }}\n={{ $json.generation_run_id }}\n={{ JSON.stringify($json.rewrite_output) }}\n={{ $json.content_type }}"
+        },
+        "resource": "database",
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      },
+      "typeVersion": 2.5
+    },
+    {
+      "id": "bv-rsp",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        600,
+        0
+      ],
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'completed', generation_run_id: $('Reshape Data').first().json.generation_run_id, compliance_score: $('Reshape Data').first().json.audit_output.compliance_score, grade: $('Reshape Data').first().json.audit_output.grade, audit_output: $('Reshape Data').first().json.audit_output, rewrite_output: $('Reshape Data').first().json.rewrite_output }) }}"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "bv-catch",
+      "name": "Catch Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        0,
+        380
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 500
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error?.message || 'Workflow execution failed. Please try again.' }) }}"
+      },
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Compliance Audit Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Brand Rewrite Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compliance Audit Agent": {
+      "main": [
+        [
+          {
+            "node": "Audit JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brand Rewrite Agent": {
+      "main": [
+        [
+          {
+            "node": "Rewrite JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Audit JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rewrite JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Results",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Results": {
+      "main": [
+        [
+          {
+            "node": "Reshape Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reshape Data": {
+      "main": [
+        [
+          {
+            "node": "Persist Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Results": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "6aa6184a-0e2d-4553-8055-f0124a14a1b2",
+  "activeVersionId": "6aa6184a-0e2d-4553-8055-f0124a14a1b2",
+  "versionCounter": 34,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-31T22:24:50.879Z",
+      "createdAt": "2026-05-31T22:24:50.879Z",
+      "role": "workflow:owner",
+      "workflowId": "eTCzQb1cnY7W4Chl",
+      "projectId": "3dfwvZhfhnaVNfU5",
+      "project": {
+        "updatedAt": "2026-05-28T13:07:34.069Z",
+        "createdAt": "2026-05-28T13:06:00.222Z",
+        "id": "3dfwvZhfhnaVNfU5",
+        "name": "aayushi agratha <aayushi.agratha@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "37d449a5-d278-4811-8f61-87e0e003b917"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

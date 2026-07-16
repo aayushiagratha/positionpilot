@@ -1,0 +1,469 @@
+{
+  "updatedAt": "2026-05-31T22:14:36.560Z",
+  "createdAt": "2026-05-31T22:14:36.560Z",
+  "id": "4MU7WrwpgZtrBqUA",
+  "name": "Competitive Narrative Mapper - Stage 1",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "cn1-wh",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -1000,
+        0
+      ],
+      "webhookId": "07c10cf3-c776-484e-8c47-5901401f97ec",
+      "parameters": {
+        "path": "competitor-stage1",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn1-val",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -800,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst missing = ['company_name','competitors','product_context'].filter(f => !body[f] || String(body[f]).trim() === '');\nif (missing.length > 0) return [{ json: { _valid: false, _error: 'Missing required fields: ' + missing.join(', ') } }];\nreturn [{ json: { ...body, _valid: true } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn1-iv",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -600,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn1-er",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        -600,
+        220
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 400
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._error || 'Invalid request' }) }}"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "cn1-ctx",
+      "name": "Market Context Contextualizer",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -400,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const d = $input.first().json;\nconst raw = d.competitors;\nconst list = Array.isArray(raw) ? raw : String(raw).split(',').map(c => c.trim()).filter(Boolean);\nconst tiered = list.map((name, i) => ({ name, threat_tier: i < 2 ? 'primary' : i < 4 ? 'secondary' : 'peripheral' }));\nreturn [{ json: {\n  company_name: d.company_name,\n  product_context: d.product_context,\n  industry: d.industry || 'not specified',\n  run_type: d.run_type || 'deep_dive',\n  competitors: tiered,\n  competitors_json: JSON.stringify(tiered)\n} }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn1-pa",
+      "name": "Positioning Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        -200,
+        -180
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2, top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together','AtlasCloud','Venice'], allow_fallbacks: true },\n  messages: [{ role: 'system', content: \"You are a competitive intelligence analyst. For each competitor provided, extract their positioning data.\\n\\nReturn ONLY valid JSON with this EXACT structure — no other text:\\n{\\n  \\\"competitors\\\": [\\n    {\\n      \\\"competitor_name\\\": \\\"exact name\\\",\\n      \\\"threat_tier\\\": \\\"primary|secondary|peripheral\\\",\\n      \\\"headline\\\": \\\"their main homepage headline\\\",\\n      \\\"tagline\\\": \\\"their tagline or slogan if known\\\",\\n      \\\"core_value_prop\\\": \\\"one sentence core value proposition\\\",\\n      \\\"target_audience\\\": [\\\"segment1\\\", \\\"segment2\\\"],\\n      \\\"differentiators\\\": [\\\"key differentiator 1\\\", \\\"key differentiator 2\\\"],\\n      \\\"pricing_positioning\\\": \\\"premium|mid-market|value|freemium|enterprise\\\",\\n      \\\"market_category\\\": \\\"how they define their market category\\\",\\n      \\\"confidence_scores\\\": {\\n        \\\"headline\\\": 0.9,\\n        \\\"target_audience\\\": 0.8,\\n        \\\"pricing_positioning\\\": 0.75,\\n        \\\"differentiators\\\": 0.85\\n      },\\n      \\\"sources\\\": [\\n        { \\\"source_url\\\": \\\"inferred URL like competitor.com\\\", \\\"extracted_claim\\\": \\\"specific claim or phrase\\\", \\\"page_type\\\": \\\"homepage|pricing|about|blog\\\" }\\n      ]\\n    }\\n  ]\\n}\" }, { role: 'user', content: 'Company: ' + $json.company_name + '\\nProduct Context: ' + $json.product_context + '\\nIndustry: ' + $json.industry + '\\nCompetitors (with threat tier): ' + $json.competitors_json + '\\n\\nAnalyze each competitor thoroughly. Use confidence_scores to indicate certainty on inferred data (0.0-1.0). Return only the JSON object.' }]\n}) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot Competitive"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "cn1-na",
+      "name": "Narrative Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        -200,
+        180
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek/deepseek-v4-flash',\n  temperature: 0.2, top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together','AtlasCloud','Venice'], allow_fallbacks: true },\n  messages: [{ role: 'system', content: \"You are a brand narrative and messaging analyst. For each competitor, extract their narrative and messaging intelligence.\\n\\nReturn ONLY valid JSON with this EXACT structure — no other text:\\n{\\n  \\\"narratives\\\": [\\n    {\\n      \\\"competitor_name\\\": \\\"exact name\\\",\\n      \\\"messaging_pillars\\\": [\\\"pillar1\\\", \\\"pillar2\\\", \\\"pillar3\\\"],\\n      \\\"pain_points_addressed\\\": [\\\"pain point 1\\\", \\\"pain point 2\\\"],\\n      \\\"proof_points\\\": [\\\"social proof claim or stat\\\", \\\"award or recognition\\\"],\\n      \\\"tone_of_voice\\\": [\\\"professional\\\", \\\"conversational\\\"],\\n      \\\"cta_style\\\": \\\"description of their primary call-to-action style\\\",\\n      \\\"emotional_hook\\\": \\\"the core emotional trigger they use in messaging\\\",\\n      \\\"confidence_scores\\\": {\\n        \\\"messaging_pillars\\\": 0.88,\\n        \\\"tone_of_voice\\\": 0.92,\\n        \\\"emotional_hook\\\": 0.80,\\n        \\\"pain_points_addressed\\\": 0.85\\n      }\\n    }\\n  ]\\n}\" }, { role: 'user', content: 'Company: ' + $json.company_name + '\\nProduct Context: ' + $json.product_context + '\\nIndustry: ' + $json.industry + '\\nCompetitors (with threat tier): ' + $json.competitors_json + '\\n\\nFor each competitor, extract their full narrative intelligence. Return only the JSON object.' }]\n}) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot Competitive"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "cn1-pg",
+      "name": "Positioning JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        0,
+        -180
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\nif (!parsed.competitors || !Array.isArray(parsed.competitors)) throw new Error('Positioning Agent: invalid schema — missing competitors array');\nreturn [{ json: { positioning_output: parsed.competitors } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn1-ng",
+      "name": "Narrative JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        0,
+        180
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\nif (!parsed.narratives || !Array.isArray(parsed.narratives)) throw new Error('Narrative Agent: invalid schema — missing narratives array');\nreturn [{ json: { narrative_output: parsed.narratives } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn1-mg",
+      "name": "Merge Research",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        200,
+        0
+      ],
+      "parameters": {
+        "mode": "combine",
+        "options": {},
+        "combineBy": "combineByPosition"
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "cn1-rs",
+      "name": "Reshape Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const merged = $input.first().json;\nreturn [{ json: {\n  _e: 0,\n  generation_run_id: $execution.id,\n  run_type: $('Market Context Contextualizer').first().json.run_type,\n  company_name: $('Market Context Contextualizer').first().json.company_name,\n  positioning_output: merged.positioning_output || null,\n  narrative_output: merged.narrative_output || null\n} }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn1-ps",
+      "name": "Persist Stage 1",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        600,
+        0
+      ],
+      "parameters": {
+        "query": "INSERT INTO competitor_runs (generation_run_id, competitor_name, agent, output, model_used, run_type, status)\nVALUES ($1, $2, 'positioning', $3::jsonb, 'deepseek/deepseek-v4-flash', $4, 'pending_review'),\n       ($5, $6, 'narrative', $7::jsonb, 'deepseek/deepseek-v4-flash', $8, 'pending_review')",
+        "options": {
+          "queryReplacement": "={{ $json.generation_run_id }}\n={{ $json.company_name }}\n={{ JSON.stringify($json.positioning_output) }}\n={{ $json.run_type }}\n={{ $json.generation_run_id }}\n={{ $json.company_name }}\n={{ JSON.stringify($json.narrative_output) }}\n={{ $json.run_type }}"
+        },
+        "resource": "database",
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      },
+      "typeVersion": 2.5
+    },
+    {
+      "id": "cn1-rsp",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        800,
+        0
+      ],
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'completed', generation_run_id: $('Reshape Data').first().json.generation_run_id, company_name: $('Reshape Data').first().json.company_name, run_type: $('Reshape Data').first().json.run_type, positioning_output: $('Reshape Data').first().json.positioning_output, narrative_output: $('Reshape Data').first().json.narrative_output }) }}"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "cn1-catch",
+      "name": "Catch Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        200,
+        380
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 500
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error?.message || 'Workflow execution failed. Please try again.' }) }}"
+      },
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Market Context Contextualizer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Market Context Contextualizer": {
+      "main": [
+        [
+          {
+            "node": "Positioning Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Narrative Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Positioning Agent": {
+      "main": [
+        [
+          {
+            "node": "Positioning JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Narrative Agent": {
+      "main": [
+        [
+          {
+            "node": "Narrative JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Positioning JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Research",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Narrative JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Research",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Research": {
+      "main": [
+        [
+          {
+            "node": "Reshape Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reshape Data": {
+      "main": [
+        [
+          {
+            "node": "Persist Stage 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Stage 1": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "c3b31dc8-009d-4517-8b75-16ca2e33f3be",
+  "activeVersionId": "c3b31dc8-009d-4517-8b75-16ca2e33f3be",
+  "versionCounter": 34,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-31T22:14:36.560Z",
+      "createdAt": "2026-05-31T22:14:36.560Z",
+      "role": "workflow:owner",
+      "workflowId": "4MU7WrwpgZtrBqUA",
+      "projectId": "3dfwvZhfhnaVNfU5",
+      "project": {
+        "updatedAt": "2026-05-28T13:07:34.069Z",
+        "createdAt": "2026-05-28T13:06:00.222Z",
+        "id": "3dfwvZhfhnaVNfU5",
+        "name": "aayushi agratha <aayushi.agratha@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "37d449a5-d278-4811-8f61-87e0e003b917"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

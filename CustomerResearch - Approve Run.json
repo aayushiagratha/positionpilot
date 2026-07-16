@@ -1,0 +1,218 @@
+{
+  "updatedAt": "2026-05-31T21:58:31.564Z",
+  "createdAt": "2026-05-31T21:58:31.564Z",
+  "id": "sQb0TCMrvwawOQM5",
+  "name": "CustomerResearch - Approve Run",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "wh-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "2c6a6085-4bd5-4aca-8c82-1853ff23f2c8",
+      "parameters": {
+        "path": "approve-research",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "responseNode",
+        "authentication": "none"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "pg-1",
+      "name": "Approve Run",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "query": "UPDATE research_runs SET status = 'approved' WHERE generation_run_id = $1 AND status = 'pending_review' RETURNING generation_run_id, agent, status",
+        "options": {
+          "queryReplacement": "={{ $json.body.generation_run_id }}"
+        },
+        "resource": "database",
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      },
+      "typeVersion": 2.6
+    },
+    {
+      "id": "approve-validate-001",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nif (!body.generation_run_id || String(body.generation_run_id).trim() === '') {\n  return [{ json: { _valid: false, _error: 'Missing required field: generation_run_id' } }];\n}\nreturn [{ json: { ...$input.first().json, _valid: true } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "approve-if-001",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "cond-valid",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "approve-err-resp-001",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        448,
+        160
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 400
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._error }) }}"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "approve-success-resp-001",
+      "name": "Success Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'approved', generation_run_id: $('Webhook').first().json.body.generation_run_id, message: 'Run approved successfully. You can now call Stage 2.' }) }}"
+      },
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Approve Run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approve Run": {
+      "main": [
+        [
+          {
+            "node": "Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "d06aad83-a381-4d28-a586-0db723390f36",
+  "activeVersionId": "d06aad83-a381-4d28-a586-0db723390f36",
+  "versionCounter": 34,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-31T21:58:31.564Z",
+      "createdAt": "2026-05-31T21:58:31.564Z",
+      "role": "workflow:owner",
+      "workflowId": "sQb0TCMrvwawOQM5",
+      "projectId": "3dfwvZhfhnaVNfU5",
+      "project": {
+        "updatedAt": "2026-05-28T13:07:34.069Z",
+        "createdAt": "2026-05-28T13:06:00.222Z",
+        "id": "3dfwvZhfhnaVNfU5",
+        "name": "aayushi agratha <aayushi.agratha@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "37d449a5-d278-4811-8f61-87e0e003b917"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,481 @@
+{
+  "updatedAt": "2026-05-31T22:15:53.207Z",
+  "createdAt": "2026-05-31T22:15:53.207Z",
+  "id": "w9SlgeOngJlcSUfv",
+  "name": "Competitive Narrative Mapper - Stage 2",
+  "description": null,
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "cn2-wh",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -800,
+        0
+      ],
+      "webhookId": "a163141d-0270-46c8-9733-a73243b903a6",
+      "parameters": {
+        "path": "competitor-stage2",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn2-rd",
+      "name": "Read Approved Research",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -600,
+        0
+      ],
+      "parameters": {
+        "query": "SELECT agent, output FROM competitor_runs WHERE generation_run_id = $1 AND status = 'approved' ORDER BY agent",
+        "options": {
+          "queryReplacement": "={{ $('Webhook').first().json.body.generation_run_id }}"
+        },
+        "resource": "database",
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      },
+      "typeVersion": 2.5,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "cn2-rs",
+      "name": "Reshape Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -400,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const rows = $input.all();\nif (!rows.length || !rows[0].json.agent) {\n  return [{ json: { _valid: false, _msg: 'No approved Stage 1 data found. Run Stage 1 first and approve it.' } }];\n}\nconst pos = rows.find(r => r.json.agent === 'positioning');\nconst narr = rows.find(r => r.json.agent === 'narrative');\nreturn [{ json: {\n  _valid: true,\n  generation_run_id: $('Webhook').first().json.body.generation_run_id,\n  positioning_output: pos?.json.output || null,\n  narrative_output: narr?.json.output || null,\n  context_json: JSON.stringify({ positioning: pos?.json.output, narrative: narr?.json.output })\n} }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn2-df",
+      "name": "Data Found?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -200,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn2-nf",
+      "name": "Not Found Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        -200,
+        220
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 404
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._msg || 'No approved data found for this generation_run_id.' }) }}"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "cn2-oa",
+      "name": "Positioning Opportunity Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        0,
+        -180
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek/deepseek-v4-flash', temperature: 0.3, top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together','AtlasCloud','Venice'], allow_fallbacks: true },\n  messages: [{ role: 'system', content: \"You are a strategic positioning consultant. You have received normalized competitive intelligence data. Your job is to identify positioning gaps and market opportunities.\\n\\nReturn ONLY valid JSON with this EXACT structure — no other text:\\n{\\n  \\\"positioning_gaps\\\": [\\n    {\\n      \\\"gap_description\\\": \\\"specific unowned positioning territory\\\",\\n      \\\"evidence\\\": [\\\"which competitors are absent here\\\", \\\"what customers want but nobody delivers\\\"],\\n      \\\"opportunity_size\\\": \\\"high|medium|low\\\",\\n      \\\"confidence_score\\\": 0.85\\n    }\\n  ],\\n  \\\"narrative_white_space\\\": [\\n    {\\n      \\\"territory\\\": \\\"narrative or emotional territory nobody owns\\\",\\n      \\\"why_available\\\": \\\"why competitors have left this open\\\",\\n      \\\"confidence_score\\\": 0.80\\n    }\\n  ],\\n  \\\"category_dynamics\\\": \\\"1-2 sentence summary of how the market defines itself and where the edges are\\\"\\n}\" }, {\n    role: 'user',\n    content: 'Competitive intelligence data:\\n' + $json.context_json + '\\n\\nIdentify all positioning gaps and narrative white space. Return only the JSON object.'\n  }]\n}) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot Competitive"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "cn2-da",
+      "name": "Differentiation Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        0,
+        180
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'deepseek/deepseek-v4-flash', temperature: 0.3, top_p: 0.1,\n  response_format: { type: 'json_object' },\n  provider: { order: ['Together','AtlasCloud','Venice'], allow_fallbacks: true },\n  messages: [{ role: 'system', content: \"You are a brand differentiation strategist. Based on competitive positioning and narrative intelligence, generate concrete differentiation angles.\\n\\nReturn ONLY valid JSON with this EXACT structure — no other text:\\n{\\n  \\\"differentiation_angles\\\": [\\n    {\\n      \\\"angle_name\\\": \\\"short name for this differentiation strategy\\\",\\n      \\\"description\\\": \\\"what this angle is and why it works\\\",\\n      \\\"messaging_hook\\\": \\\"one punchy sentence you could put on a homepage\\\",\\n      \\\"target_segment\\\": \\\"who this resonates most with\\\",\\n      \\\"competitive_contrast\\\": \\\"which competitor(s) this directly positions against\\\",\\n      \\\"confidence_score\\\": 0.88\\n    }\\n  ],\\n  \\\"recommended_market_category\\\": \\\"the category name your company should own\\\",\\n  \\\"positioning_statement\\\": \\\"we help [target] who [pain] by [solution] unlike [competitor] who [contrast]\\\",\\n  \\\"top_3_strategic_priorities\\\": [\\\"priority 1\\\", \\\"priority 2\\\", \\\"priority 3\\\"]\\n}\" }, {\n    role: 'user',\n    content: 'Competitive intelligence data:\\n' + $json.context_json + '\\n\\nGenerate 3-5 concrete differentiation angles. Return only the JSON object.'\n  }]\n}) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot Competitive"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "cn2-og",
+      "name": "Opportunity JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        200,
+        -180
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\nif (!parsed.positioning_gaps) throw new Error('Opportunity Agent: invalid schema — missing positioning_gaps');\nreturn [{ json: { opportunity_output: parsed } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn2-dg",
+      "name": "Differentiation JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        200,
+        180
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nconst parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;\nif (!parsed.differentiation_angles) throw new Error('Differentiation Agent: invalid schema — missing differentiation_angles');\nreturn [{ json: { differentiation_output: parsed } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn2-mg",
+      "name": "Merge Stage 2",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "mode": "combine",
+        "options": {},
+        "combineBy": "combineByPosition"
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "cn2-br",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        600,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const merged = $input.first().json;\nconst gen_run_id = $('Webhook').first().json.body.generation_run_id;\nreturn [{ json: {\n  generation_run_id: gen_run_id,\n  opportunity_output: merged.opportunity_output || null,\n  differentiation_output: merged.differentiation_output || null\n} }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "cn2-ps",
+      "name": "Persist Stage 2",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        800,
+        0
+      ],
+      "parameters": {
+        "query": "INSERT INTO competitor_runs (generation_run_id, agent, output, model_used, run_type, status)\nVALUES ($1, 'opportunity', $2::jsonb, 'deepseek/deepseek-v4-flash', 'deep_dive', 'completed'),\n       ($3, 'differentiation', $4::jsonb, 'deepseek/deepseek-v4-flash', 'deep_dive', 'completed')",
+        "options": {
+          "queryReplacement": "={{ $json.generation_run_id }}\n={{ JSON.stringify($json.opportunity_output) }}\n={{ $json.generation_run_id }}\n={{ JSON.stringify($json.differentiation_output) }}"
+        },
+        "resource": "database",
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      },
+      "typeVersion": 2.5
+    },
+    {
+      "id": "cn2-rsp",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1000,
+        0
+      ],
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'completed', generation_run_id: $('Build Response').first().json.generation_run_id, opportunity_output: $('Build Response').first().json.opportunity_output, differentiation_output: $('Build Response').first().json.differentiation_output }) }}"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "cn2-catch",
+      "name": "Catch Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        400,
+        380
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 500
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error?.message || 'Workflow execution failed. Please try again.' }) }}"
+      },
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Approved Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Approved Research": {
+      "main": [
+        [
+          {
+            "node": "Reshape Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reshape Data": {
+      "main": [
+        [
+          {
+            "node": "Data Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Found?": {
+      "main": [
+        [
+          {
+            "node": "Positioning Opportunity Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Differentiation Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not Found Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Positioning Opportunity Agent": {
+      "main": [
+        [
+          {
+            "node": "Opportunity JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Differentiation Agent": {
+      "main": [
+        [
+          {
+            "node": "Differentiation JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opportunity JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Differentiation JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 2",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Stage 2": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Response": {
+      "main": [
+        [
+          {
+            "node": "Persist Stage 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Stage 2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "7fdaea77-6e77-4507-b0da-c74d0a8639d4",
+  "activeVersionId": "7fdaea77-6e77-4507-b0da-c74d0a8639d4",
+  "versionCounter": 34,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-31T22:15:53.207Z",
+      "createdAt": "2026-05-31T22:15:53.207Z",
+      "role": "workflow:owner",
+      "workflowId": "w9SlgeOngJlcSUfv",
+      "projectId": "3dfwvZhfhnaVNfU5",
+      "project": {
+        "updatedAt": "2026-05-28T13:07:34.069Z",
+        "createdAt": "2026-05-28T13:06:00.222Z",
+        "id": "3dfwvZhfhnaVNfU5",
+        "name": "aayushi agratha <aayushi.agratha@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "37d449a5-d278-4811-8f61-87e0e003b917"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

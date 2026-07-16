@@ -1,0 +1,481 @@
+{
+  "updatedAt": "2026-05-31T22:03:57.700Z",
+  "createdAt": "2026-05-31T21:36:21.705Z",
+  "id": "aTOjjUi01aap8ptF",
+  "name": "CustomerResearch - Stage 2",
+  "description": "",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "rs2-wh",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "f26bd608-55dd-4bc9-870c-444e8126ccc4",
+      "parameters": {
+        "path": "research-stage2",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs2-read",
+      "name": "Read Approved Research",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        -380,
+        0
+      ],
+      "parameters": {
+        "query": "SELECT agent, output FROM research_runs WHERE generation_run_id = $1 AND status = 'approved' ORDER BY agent",
+        "options": {
+          "queryReplacement": "={{ $('Webhook').first().json.body.generation_run_id }}"
+        },
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      },
+      "typeVersion": 2.5,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "rs2-reshape",
+      "name": "Reshape Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -160,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const allItems = $input.all();\nif (allItems.length === 0 || !allItems[0].json.agent) {\n  return [{ json: { _valid: false, _msg: 'No approved research data found. Run Stage 1 first and approve it.' } }];\n}\nconst gen_run_id = $('Webhook').first().json.body.generation_run_id;\nconst pain = allItems.find(i => i.json.agent === 'pain');\nconst triggers = allItems.find(i => i.json.agent === 'triggers');\nreturn [{ json: {\n  _valid: true,\n  generation_run_id: gen_run_id,\n  pain_output: pain ? pain.json.output : null,\n  triggers_output: triggers ? triggers.json.output : null\n} }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs2-if",
+      "name": "Data Found?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        60,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs2-notfound",
+      "name": "Not Found Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        60,
+        180
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 404
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._msg }) }}"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "rs2-persona",
+      "name": "Persona Synthesis Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        280,
+        -120
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "{\"model\":\"deepseek/deepseek-v4-flash\",\"temperature\":0.2,\"top_p\":0.1,\"response_format\":{\"type\":\"json_object\"},\"provider\":{\"order\":[\"Together\",\"AtlasCloud\",\"Venice\"],\"allow_fallbacks\":true},\"messages\":[{\"role\":\"system\",\"content\":\"You are a senior B2B marketing strategist and customer psychologist.\\n\\nUsing validated customer research data (pain points, objections, buying triggers, exact customer language), synthesise a behavioural customer persona.\\n\\nReturn ONLY valid JSON with this exact structure:\\n{\\n  \\\"persona_name\\\": \\\"a descriptive name for this customer type\\\",\\n  \\\"persona_summary\\\": \\\"2-3 sentence profile of who this person is\\\",\\n  \\\"primary_motivation\\\": \\\"the single biggest thing driving them to seek a solution\\\",\\n  \\\"biggest_fear\\\": \\\"what keeps them up at night / what they most want to avoid\\\",\\n  \\\"decision_criteria\\\": [\\\"criterion 1 they use to evaluate solutions\\\", \\\"criterion 2\\\", \\\"criterion 3\\\"],\\n  \\\"typical_objections\\\": [\\\"objection 1 they raise before buying\\\", \\\"objection 2\\\"],\\n  \\\"a_day_in_their_life\\\": \\\"vivid 2-3 sentence description of their daily context\\\",\\n  \\\"where_to_find_them\\\": [\\\"channel or community 1\\\", \\\"channel 2\\\"]\\n}\\n\\nMake this feel like a real person, not a demographic box. Ground every point in the research data provided.\"},{\"role\":\"user\",\"content\":\"Company: {{ $('Webhook').first().json.body.company_name }}\\n\\nVALIDATED RESEARCH DATA:\\nPain Points & Objections:\\n{{ JSON.stringify($json.pain_output) }}\\n\\nBuying Triggers & Language:\\n{{ JSON.stringify($json.triggers_output) }}\\n\\nSynthesise a detailed behavioural persona from this validated research.\"}]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot Research"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.4,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "rs2-msg",
+      "name": "Messaging Intelligence Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        280,
+        120
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "{\"model\":\"deepseek/deepseek-v4-flash\",\"temperature\":0.2,\"top_p\":0.1,\"response_format\":{\"type\":\"json_object\"},\"provider\":{\"order\":[\"Together\",\"AtlasCloud\",\"Venice\"],\"allow_fallbacks\":true},\"messages\":[{\"role\":\"system\",\"content\":\"You are a senior copywriter and messaging strategist specialising in B2B SaaS.\\n\\nUsing validated customer research, generate actionable messaging intelligence.\\n\\nReturn ONLY valid JSON with this exact structure:\\n{\\n  \\\"headline_angles\\\": [\\\"angle using exact customer language 1\\\", \\\"angle 2\\\", \\\"angle 3\\\", \\\"angle 4\\\"],\\n  \\\"key_messages\\\": [\\\"core message addressing top pain 1\\\", \\\"message 2\\\", \\\"message 3\\\"],\\n  \\\"objection_handlers\\\": [{\\\"objection\\\": \\\"the objection\\\", \\\"response\\\": \\\"how to handle it\\\"}],\\n  \\\"email_subject_lines\\\": [\\\"subject line 1\\\", \\\"subject line 2\\\", \\\"subject line 3\\\", \\\"subject line 4\\\"],\\n  \\\"ad_hooks\\\": [\\\"hook using customer's exact language 1\\\", \\\"hook 2\\\", \\\"hook 3\\\"],\\n  \\\"positioning_language\\\": \\\"2-3 sentences of positioning copy using the customer's own vocabulary\\\"\\n}\\n\\nUse the customer's exact language where possible. These should feel like they were written by the customer, not a copywriter.\"},{\"role\":\"user\",\"content\":\"Company: {{ $('Webhook').first().json.body.company_name }}\\n\\nVALIDATED RESEARCH DATA:\\nPain Points & Objections:\\n{{ JSON.stringify($json.pain_output) }}\\n\\nBuying Triggers & Language:\\n{{ JSON.stringify($json.triggers_output) }}\\n\\nGenerate messaging intelligence grounded entirely in this customer research.\"}]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot Research"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.4,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "rs2-pgate",
+      "name": "Persona JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        500,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch(e) {\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  parsed = match ? JSON.parse(match[0]) : {};\n}\nreturn [{ json: { persona_output: parsed } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs2-mgate",
+      "name": "Messaging JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        500,
+        120
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch(e) {\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  parsed = match ? JSON.parse(match[0]) : {};\n}\nreturn [{ json: { messaging_output: parsed } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs2-merge",
+      "name": "Merge Stage 2",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "mode": "combine",
+        "options": {},
+        "combineBy": "combineByPosition"
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "rs2-mreshape",
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        940,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const merged = $input.first().json;\nconst gen_run_id = $('Webhook').first().json.body.generation_run_id;\nreturn [{ json: {\n  generation_run_id: gen_run_id,\n  persona_output: merged.persona_output || null,\n  messaging_output: merged.messaging_output || null\n} }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs2-persist",
+      "name": "Persist Stage 2",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        1160,
+        0
+      ],
+      "parameters": {
+        "query": "INSERT INTO research_runs (generation_run_id, agent, output, model_used, status)\nVALUES\n($1, 'persona', $2::jsonb, 'deepseek/deepseek-v4-flash', 'completed'),\n($3, 'messaging_intel', $4::jsonb, 'deepseek/deepseek-v4-flash', 'completed')",
+        "options": {
+          "queryReplacement": "=={{ $json.generation_run_id }}\n={{ JSON.stringify($json.persona_output) }}\n={{ $json.generation_run_id }}\n={{ JSON.stringify($json.messaging_output) }}"
+        },
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      },
+      "typeVersion": 2.5
+    },
+    {
+      "id": "rs2-respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1380,
+        0
+      ],
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'completed', generation_run_id: $('Build Response').first().json.generation_run_id, persona_output: $('Build Response').first().json.persona_output, messaging_output: $('Build Response').first().json.messaging_output }) }}"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "cr2-catch",
+      "name": "Catch Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        900,
+        400
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 500
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error?.message || 'Workflow execution failed. Please try again.' }) }}"
+      },
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Read Approved Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Approved Research": {
+      "main": [
+        [
+          {
+            "node": "Reshape Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reshape Data": {
+      "main": [
+        [
+          {
+            "node": "Data Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Found?": {
+      "main": [
+        [
+          {
+            "node": "Persona Synthesis Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Messaging Intelligence Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Not Found Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persona Synthesis Agent": {
+      "main": [
+        [
+          {
+            "node": "Persona JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Messaging Intelligence Agent": {
+      "main": [
+        [
+          {
+            "node": "Messaging JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persona JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Messaging JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Stage 2",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Stage 2": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Response": {
+      "main": [
+        [
+          {
+            "node": "Persist Stage 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Stage 2": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "a1517252-678a-4f38-9096-34f9dd2fc426",
+  "activeVersionId": "a1517252-678a-4f38-9096-34f9dd2fc426",
+  "versionCounter": 57,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-31T21:36:21.705Z",
+      "createdAt": "2026-05-31T21:36:21.705Z",
+      "role": "workflow:owner",
+      "workflowId": "aTOjjUi01aap8ptF",
+      "projectId": "3dfwvZhfhnaVNfU5",
+      "project": {
+        "updatedAt": "2026-05-28T13:07:34.069Z",
+        "createdAt": "2026-05-28T13:06:00.222Z",
+        "id": "3dfwvZhfhnaVNfU5",
+        "name": "aayushi agratha <aayushi.agratha@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "37d449a5-d278-4811-8f61-87e0e003b917"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

@@ -1,0 +1,446 @@
+{
+  "updatedAt": "2026-05-31T22:03:49.369Z",
+  "createdAt": "2026-05-31T21:34:49.769Z",
+  "id": "KTD1woBkrHaWuNfy",
+  "name": "CustomerResearch - Stage 1",
+  "description": "",
+  "active": true,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "rs1-wh",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -600,
+        0
+      ],
+      "webhookId": "e33c81c2-98f7-4ece-98fa-5e8c0ceed09c",
+      "parameters": {
+        "path": "research-stage1",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs1-val",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -400,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst missing = ['company_name','raw_data'].filter(f => !body[f] || String(body[f]).trim() === '');\nif (missing.length > 0) {\n  return [{ json: { _valid: false, _error: 'Missing required fields: ' + missing.join(', ') } }];\n}\nreturn [{ json: { ...$input.first().json, _valid: true } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs1-if",
+      "name": "Is Valid?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -200,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json._valid }}",
+              "rightValue": true
+            }
+          ]
+        }
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs1-err",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        -200,
+        180
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 400
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json._error || 'Invalid request' }) }}"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "rs1-pain",
+      "name": "Pain & Objections Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        0,
+        -120
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "{\"model\":\"deepseek/deepseek-v4-flash\",\"temperature\":0.2,\"top_p\":0.1,\"response_format\":{\"type\":\"json_object\"},\"provider\":{\"order\":[\"Together\",\"AtlasCloud\",\"Venice\"],\"allow_fallbacks\":true},\"messages\":[{\"role\":\"system\",\"content\":\"You are an expert customer research analyst specialising in B2B SaaS.\\n\\nAnalyse the provided raw customer data and extract structured insights.\\n\\nReturn ONLY valid JSON with this exact structure:\\n{\\n  \\\"pain_points\\\": [\\\"specific pain described by customer\\\"],\\n  \\\"objections\\\": [\\\"hesitation or concern about buying/using\\\"],\\n  \\\"frustrations\\\": [\\\"negative experience with current solutions\\\"],\\n  \\\"unmet_needs\\\": [\\\"what they wish existed or worked better\\\"],\\n  \\\"risk_concerns\\\": [\\\"what makes them hesitate to commit\\\"]\\n}\\n\\nUse 4-8 items per array. Be specific — extract actual insights, not generic summaries. Use the customer's own implied meaning.\"},{\"role\":\"user\",\"content\":\"Company: {{ $('Webhook').first().json.body.company_name }}\\nData Type: {{ $('Webhook').first().json.body.data_type }} || 'mixed customer data'\\nProduct Context: {{ $('Webhook').first().json.body.product_context }} || 'B2B SaaS product'\\n\\nRAW CUSTOMER DATA:\\n{{ $('Webhook').first().json.body.raw_data }}\\n\\nExtract all pain points, objections, frustrations, unmet needs, and risk concerns.\"}]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot Research"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.4,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "rs1-trg",
+      "name": "Triggers & Language Agent",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        0,
+        120
+      ],
+      "parameters": {
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "method": "POST",
+        "jsonBody": "{\"model\":\"deepseek/deepseek-v4-flash\",\"temperature\":0.2,\"top_p\":0.1,\"response_format\":{\"type\":\"json_object\"},\"provider\":{\"order\":[\"Together\",\"AtlasCloud\",\"Venice\"],\"allow_fallbacks\":true},\"messages\":[{\"role\":\"system\",\"content\":\"You are an expert customer research analyst specialising in B2B SaaS marketing.\\n\\nAnalyse the provided raw customer data and extract what motivates customers.\\n\\nReturn ONLY valid JSON with this exact structure:\\n{\\n  \\\"buying_triggers\\\": [\\\"what prompted them to buy or seriously consider buying\\\"],\\n  \\\"exact_language\\\": [\\\"verbatim phrases or words customers actually use — their vocabulary\\\"],\\n  \\\"emotional_states\\\": [\\\"emotions expressed: frustration, excitement, anxiety, relief, hope\\\"],\\n  \\\"desired_outcomes\\\": [\\\"what success looks like to them specifically\\\"],\\n  \\\"trust_signals\\\": [\\\"what builds or destroys their trust in a vendor\\\"]\\n}\\n\\nUse 4-8 items per array. Capture authentic customer voice. Quote exact phrases where possible.\"},{\"role\":\"user\",\"content\":\"Company: {{ $('Webhook').first().json.body.company_name }}\\nData Type: {{ $('Webhook').first().json.body.data_type }} || 'mixed customer data'\\nProduct Context: {{ $('Webhook').first().json.body.product_context }} || 'B2B SaaS product'\\n\\nRAW CUSTOMER DATA:\\n{{ $('Webhook').first().json.body.raw_data }}\\n\\nExtract buying triggers, exact customer language, emotional states, desired outcomes, and trust signals.\"}]}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_OPENROUTER_API_KEY"
+            },
+            {
+              "name": "HTTP-Referer",
+              "value": "http://localhost:5678"
+            },
+            {
+              "name": "X-Title",
+              "value": "PositionPilot Research"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.4,
+      "waitBetweenTries": 3000
+    },
+    {
+      "id": "rs1-paingate",
+      "name": "Pain JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        220,
+        -120
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch(e) {\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  parsed = match ? JSON.parse(match[0]) : {};\n}\nreturn [{ json: { pain_output: parsed } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs1-trggate",
+      "name": "Triggers JSON Gate",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        220,
+        120
+      ],
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.choices[0].message.content;\nlet parsed;\ntry { parsed = JSON.parse(raw); } catch(e) {\n  const match = raw.match(/\\{[\\s\\S]*\\}/);\n  parsed = match ? JSON.parse(match[0]) : {};\n}\nreturn [{ json: { triggers_output: parsed } }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs1-merge",
+      "name": "Merge Research",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        440,
+        0
+      ],
+      "parameters": {
+        "mode": "combine",
+        "options": {},
+        "combineBy": "combineByPosition"
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "rs1-reshape",
+      "name": "Reshape Data",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        660,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const merged = $input.first().json;\nreturn [{ json: {\n  _e: 0,\n  generation_run_id: $execution.id,\n  pain_output: merged.pain_output || null,\n  triggers_output: merged.triggers_output || null\n} }];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "rs1-persist",
+      "name": "Persist Research",
+      "type": "n8n-nodes-base.postgres",
+      "position": [
+        880,
+        0
+      ],
+      "parameters": {
+        "query": "INSERT INTO research_runs (generation_run_id, agent, output, model_used, status)\nVALUES\n($1, 'pain', $2::jsonb, 'deepseek/deepseek-v4-flash', 'pending_review'),\n($3, 'triggers', $4::jsonb, 'deepseek/deepseek-v4-flash', 'pending_review')",
+        "options": {
+          "queryReplacement": "=={{ $json.generation_run_id }}\n={{ JSON.stringify($json.pain_output) }}\n={{ $json.generation_run_id }}\n={{ JSON.stringify($json.triggers_output) }}"
+        },
+        "operation": "executeQuery"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "qaxa6Ev5VnDuHqaF",
+          "name": "Postgres account"
+        }
+      },
+      "typeVersion": 2.5
+    },
+    {
+      "id": "rs1-respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1100,
+        0
+      ],
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'completed', generation_run_id: $('Reshape Data').first().json.generation_run_id, pain_output: $('Reshape Data').first().json.pain_output, triggers_output: $('Reshape Data').first().json.triggers_output }) }}"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "cr1-catch",
+      "name": "Catch Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        900,
+        300
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 500
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'error', message: $json.error?.message || 'Workflow execution failed. Please try again.' }) }}"
+      },
+      "typeVersion": 1.1
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Is Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Valid?": {
+      "main": [
+        [
+          {
+            "node": "Pain & Objections Agent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Triggers & Language Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pain & Objections Agent": {
+      "main": [
+        [
+          {
+            "node": "Pain JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triggers & Language Agent": {
+      "main": [
+        [
+          {
+            "node": "Triggers JSON Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pain JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Research",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Triggers JSON Gate": {
+      "main": [
+        [
+          {
+            "node": "Merge Research",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Catch Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Research": {
+      "main": [
+        [
+          {
+            "node": "Reshape Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reshape Data": {
+      "main": [
+        [
+          {
+            "node": "Persist Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Research": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": null,
+  "versionId": "938387d4-fc55-4f03-9c26-f1a50fc7bd16",
+  "activeVersionId": "938387d4-fc55-4f03-9c26-f1a50fc7bd16",
+  "versionCounter": 55,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-31T21:34:49.769Z",
+      "createdAt": "2026-05-31T21:34:49.769Z",
+      "role": "workflow:owner",
+      "workflowId": "KTD1woBkrHaWuNfy",
+      "projectId": "3dfwvZhfhnaVNfU5",
+      "project": {
+        "updatedAt": "2026-05-28T13:07:34.069Z",
+        "createdAt": "2026-05-28T13:06:00.222Z",
+        "id": "3dfwvZhfhnaVNfU5",
+        "name": "aayushi agratha <aayushi.agratha@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "37d449a5-d278-4811-8f61-87e0e003b917"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

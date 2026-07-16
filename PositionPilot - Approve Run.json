@@ -1,11 +1,16 @@
 {
+  "updatedAt": "2026-07-05T16:05:00.954Z",
+  "createdAt": "2026-05-31T16:09:29.161Z",
+  "id": "1UsyrGFuUbCKTpGo",
   "name": "PositionPilot - Approve Run",
+  "description": null,
+  "active": true,
+  "isArchived": false,
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "approve-run",
-        "authentication": "headerAuth",
         "responseMode": "responseNode",
         "options": {}
       },
@@ -17,20 +22,14 @@
         0
       ],
       "webhookId": "2c6a6085-4bd5-4aca-8c82-1853ff23f2c8",
-      "typeVersion": 2,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "MJXIEO6iR9LFLGZM",
-          "name": "x-api-key"
-        }
-      }
+      "typeVersion": 2
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "UPDATE strategy_runs SET status = 'approved' WHERE generation_run_id = $1 AND status = 'pending_review' RETURNING generation_run_id, agent, status",
+        "query": "UPDATE strategy_runs\nSET output = CASE\n    WHEN agent = 'positioning' THEN output || $2::jsonb\n    WHEN agent = 'icp' THEN output || $3::jsonb\n    ELSE output\n  END,\n  status = 'approved'\nWHERE generation_run_id = $1 AND status = 'pending_review'\nRETURNING generation_run_id, agent, status\n",
         "options": {
-          "queryReplacement": "={{ $json.body.generation_run_id }}"
+          "queryReplacement": "={{ $json.body.generation_run_id }}, {{ JSON.stringify($json.body.positioning_output || {}) }}, {{ JSON.stringify($json.body.icp_output || {}) }}"
         }
       },
       "id": "pg-1",
@@ -129,7 +128,6 @@
       "typeVersion": 1
     }
   ],
-  "pinData": {},
   "connections": {
     "Webhook": {
       "main": [
@@ -183,16 +181,41 @@
       ]
     }
   },
-  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate"
   },
-  "versionId": "659e4219-8e76-4fd4-8f04-2d61aa124b45",
+  "staticData": null,
   "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "44a5bea69ab5e722c55e251b34f2c6f0196393cad9792db1001438c847f7eb53"
+    "templateCredsSetupCompleted": true
   },
-  "id": "1UsyrGFuUbCKTpGo",
-  "tags": []
+  "pinData": {},
+  "versionId": "2afdfded-9e4d-4729-966b-f9039cad07a4",
+  "activeVersionId": "2afdfded-9e4d-4729-966b-f9039cad07a4",
+  "versionCounter": 66,
+  "triggerCount": 1,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-31T16:09:29.161Z",
+      "createdAt": "2026-05-31T16:09:29.161Z",
+      "role": "workflow:owner",
+      "workflowId": "1UsyrGFuUbCKTpGo",
+      "projectId": "3dfwvZhfhnaVNfU5",
+      "project": {
+        "updatedAt": "2026-05-28T13:07:34.069Z",
+        "createdAt": "2026-05-28T13:06:00.222Z",
+        "id": "3dfwvZhfhnaVNfU5",
+        "name": "aayushi agratha <aayushi.agratha@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "37d449a5-d278-4811-8f61-87e0e003b917"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version 2afdfded",
+    "description": "Approve now accepts optional positioning_output/icp_output patches in the request body and jsonb-merges them into the stored foundation before flipping status to approved, so review-screen edits (pillars, triggers, statement, persona) actually reach Stage 2 instead of being silently discarded. Backward compatible: omitting these fields merges {} (no-op)."
+  }
 }
