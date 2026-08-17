@@ -6,6 +6,10 @@ Frontend: [positionpilot-frontend](https://github.com/aayushiagratha/positionpil
 
 > **Scope of this repo:** all 15 agents across 4 pipelines. The 5 user-facing agents (PositionPilot) are the product; the other 10 — competitive narrative, customer research, and brand voice — are built and published here, but have no frontend calling them yet. See `WORKFLOWS_360.md` for a walkthrough of the three non-PositionPilot layers.
 
+## Demo
+
+[▶ 4-minute product walkthrough](https://www.youtube.com/watch?v=R4FTsZzQAOc) — a live run against a known product (Fathom), the human review/approval step, then the n8n orchestration, model calls, and persistence underneath.
+
 ## What it does
 
 PositionPilot takes 9 inputs about a company, drafts a positioning + ICP foundation for human review (edit, add, delete, or AI-rewrite any field), then generates a complete GTM strategy package from the approved foundation:
