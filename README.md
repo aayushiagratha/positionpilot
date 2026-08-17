@@ -2,7 +2,7 @@
 
 AI-native GTM and positioning engine that automates ICP creation, messaging frameworks, and GTM strategy generation using specialized multi-agent workflows.
 
-Frontend: [positionpilot-frontend](https://github.com/aayushiagratha/positionpilot-frontend) — live at [positionpilot-ai.vercel.app](https://positionpilot-ai.vercel.app). This repo holds the n8n workflows, schema, and infra the frontend calls into.
+Frontend: [positionpilot-frontend](https://github.com/aayushiagratha/positionpilot-frontend), deployed on Vercel at [positionpilot-ai.vercel.app](https://positionpilot-ai.vercel.app). This repo holds the n8n workflows, schema, and infra the frontend calls into — n8n currently runs locally via ngrok tunnel, so the deployed frontend isn't always reachable end to end. See the [demo video](https://www.youtube.com/watch?v=R4FTsZzQAOc) for a guaranteed-working walkthrough.
 
 > **Scope of this repo:** all 15 agents across 4 pipelines. The 5 user-facing agents (PositionPilot) are the product; the other 10 — competitive narrative, customer research, and brand voice — are built and published here, but have no frontend calling them yet. See `WORKFLOWS_360.md` for a walkthrough of the three non-PositionPilot layers.
 
