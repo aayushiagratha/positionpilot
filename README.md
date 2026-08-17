@@ -1,5 +1,7 @@
 # PositionPilot
 
+[![CI](https://github.com/aayushiagratha/positionpilot/actions/workflows/ci.yml/badge.svg)](https://github.com/aayushiagratha/positionpilot/actions/workflows/ci.yml)
+
 AI-native GTM and positioning engine that automates ICP creation, messaging frameworks, and GTM strategy generation using specialized multi-agent workflows.
 
 Frontend: [positionpilot-frontend](https://github.com/aayushiagratha/positionpilot-frontend), deployed on Vercel at [positionpilot-ai.vercel.app](https://positionpilot-ai.vercel.app). This repo holds the n8n workflows, schema, and infra the frontend calls into — n8n currently runs locally via ngrok tunnel, so the deployed frontend isn't always reachable end to end. See the [demo video](https://www.youtube.com/watch?v=R4FTsZzQAOc) for a guaranteed-working walkthrough.
@@ -106,6 +108,21 @@ WEBHOOK_URL=your-n8n-url
 All 10 webhooks sit behind Header Auth. Every request must carry an `x-api-key` header matching the `Webhook Secret` credential; requests without it are rejected with a 403 before any workflow logic runs. The workflow files carry this setting, so an import brings it with them — you only need to create the credential itself (Setup step 4).
 
 No credentials are committed. Every API key is referenced through an n8n credential (`OpenRouter Auth`, `Serper API`, `pdf`, `Webhook Secret`, the Postgres connection), so the workflow files hold references, never secrets.
+
+## Testing
+
+```bash
+pip install pytest
+pytest tests/ -v
+```
+
+There's no application code here to unit test — it's n8n workflow exports
+plus a Postgres schema. What's checked instead: every workflow file is valid
+JSON with the expected n8n export shape; the security claim above ("all 10
+webhooks sit behind Header Auth") is verified against the actual exported
+node config, not just asserted in prose; and `schema.sql` is applied against
+a real Postgres in CI to confirm it doesn't just read plausibly, it runs. See
+`.github/workflows/ci.yml`.
 
 ## Built by
 

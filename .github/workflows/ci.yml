@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  workflow-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest
+      - run: pytest tests/ -v
+
+  schema-applies-cleanly:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply schema.sql against a real Postgres
+        env:
+          PGPASSWORD: postgres
+        run: psql -h localhost -U postgres -f schema.sql
+      - name: Verify all four tables exist
+        env:
+          PGPASSWORD: postgres
+        run: |
+          for t in strategy_runs research_runs competitor_runs brand_voice_runs; do
+            psql -h localhost -U postgres -tAc "SELECT to_regclass('$t')" | grep -qx "$t" \
+              || { echo "table $t was not created"; exit 1; }
+          done
