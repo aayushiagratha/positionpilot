@@ -106,3 +106,7 @@ No credentials are committed. Every API key is referenced through an n8n credent
 ## Built by
 
 Aayushi Agratha — https://www.linkedin.com/in/aayushiagratha/
+
+## License
+
+MIT.
